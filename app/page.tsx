@@ -1,5 +1,5 @@
-import WeatherDashboard from "./weather-dashboard";
+import WeatherApp from "./weather-app";
 
 export default function Home() {
-  return <WeatherDashboard />;
+  return <WeatherApp />;
 }
