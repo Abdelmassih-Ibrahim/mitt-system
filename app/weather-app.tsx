@@ -352,6 +352,12 @@ export default function WeatherApp() {
     }
   };
 
+  const chooseMode = (nextMode: Mode) => {
+    setMode(nextMode);
+    void savePreferences({ ...preferences, preferred_mode: nextMode })
+      .catch(() => setStatusMessage(t.saveFailed));
+  };
+
   const saveCapsule = async () => {
     if (!weather || !selectedQuest) return;
     setIsSaving(true);
@@ -423,7 +429,7 @@ export default function WeatherApp() {
           <div className="score-details"><div className="score-track" role="meter" aria-label={t.score} aria-valuemin={0} aria-valuemax={100} aria-valuenow={weather?.survival.score ?? 0}><span style={{ width: `${weather?.survival.score ?? 0}%` }} /></div><p>{weather ? localize(weather.survival.summary, preferences.language) : t.scoreNote}</p><details><summary>{t.whyScore}</summary><p className="score-disclaimer">{weather?.survival.disclaimer ?? t.scoreNote}</p>{weather?.survival.factors.length ? <ul>{weather.survival.factors.map((factor) => <li key={factor.label}><strong>{factor.label} −{factor.deduction}</strong><span>{factor.explanation}</span></li>)}</ul> : <p>{t.noFactors}</p>}</details></div>
         </section>
 
-        <section className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => setMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
+        <section className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
 
         <section className="outfit-section"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.outfit}</p><h2>{selectedPlan ? localize(selectedPlan.outfit_title, preferences.language) : t.loading}</h2><p className="section-description">{selectedPlan ? localize(selectedPlan.outfit_text, preferences.language) : ""}</p></div><span className="outfit-mark" aria-hidden="true">01</span></div>{selectedPlan?.tip ? <p className="outfit-tip">{localize(selectedPlan.tip, preferences.language)}</p> : null}</section>
 
