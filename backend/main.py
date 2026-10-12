@@ -397,6 +397,79 @@ def build_dj(current: CurrentConditions) -> WeatherDJ:
     return WeatherDJ(genre="Soft electronic", mood="Lugn upptäckare", soundscape="Dämpad puls, stadssus och enstaka pianotoner", reason="En stadig rytm gör även en grå dag lättare.")
 
 
+def build_headline(current: CurrentConditions, mood: WeatherMood, sunset: str | None) -> str:
+    if current.code >= 95:
+        return "Åskan får hålla showen. Du tar skydd."
+    if current.wind_speed >= 40 and current.precipitation > 0:
+        return "Sidoregn. Jackan får jobba övertid."
+    if current.feels_like <= -5:
+        return "Kylan har synpunkter på dina öron."
+    if mood.mood == "clear" and current.is_day:
+        return "Misstänkt mycket sol. Passa på."
+    if mood.mood == "rain":
+        return "Grå himmel. Kaffe är fortfarande lagligt."
+    if sunset:
+        return f"En stilla dag. Dagsljuset räcker till {sunset}."
+    return "Vädret bestämmer tonen. Du bestämmer dagen."
+
+
+def build_outdoor_window(
+    hourly: list[ForecastHour], sunrise: str | None, sunset: str | None
+) -> OutdoorWindow:
+    suitable = [
+        hour
+        for hour in hourly
+        if hour.is_day
+        and (hour.precipitation_probability is None or hour.precipitation_probability <= 30)
+        and (hour.wind_speed is None or hour.wind_speed < 35)
+        and hour.weather.mood not in ("storm", "snow")
+    ]
+    if not suitable:
+        return OutdoorWindow(
+            available=False,
+            start=None,
+            end=None,
+            explanation="Ingen lugn och torr dagsljuslucka i den hämtade prognosen. Välj ett inomhusalternativ.",
+        )
+
+    start_hour = suitable[0]
+    end_hour = suitable[0]
+    longest_start = start_hour
+    longest_end = end_hour
+    longest_length = 1
+    run_length = 1
+
+    for previous, hour in zip(suitable, suitable[1:]):
+        previous_hour = int(previous.time[:2])
+        hour_value = int(hour.time[:2])
+        if hour_value == (previous_hour + 1) % 24:
+            run_length += 1
+        else:
+            run_length = 1
+            start_hour = hour
+        end_hour = hour
+        if run_length > longest_length:
+            longest_length = run_length
+            longest_start = start_hour
+            longest_end = end_hour
+
+    if longest_length < 2:
+        return OutdoorWindow(
+            available=True,
+            start=longest_start.time,
+            end=longest_end.time,
+            explanation=f"En kortare lucka med dagsljus och högst 30 % nederbördsrisk. Soluppgång {sunrise or 'saknas'}, solnedgång {sunset or 'saknas'}.",
+        )
+
+    end_time = f"{(int(longest_end.time[:2]) + 1) % 24:02d}:00"
+    return OutdoorWindow(
+        available=True,
+        start=longest_start.time,
+        end=end_time,
+        explanation=f"Längsta sammanhängande dagsljusfönstret med högst 30 % nederbördsrisk och vind under 35 km/h. Soluppgång {sunrise or 'saknas'}, solnedgång {sunset or 'saknas'}.",
+    )
+
+
 def build_payload(data: dict, city: str, mode: WeatherMode) -> WeatherPayload:
     raw = data["current"]
     current = CurrentConditions(
@@ -411,21 +484,62 @@ def build_payload(data: dict, city: str, mode: WeatherMode) -> WeatherPayload:
     )
     mood = describe_weather(current.code, current.is_day)
     local_date = data.get("daily", {}).get("time", [""])[0]
+    sunrise_value = data.get("daily", {}).get("sunrise", [None])[0]
     sunset_value = data.get("daily", {}).get("sunset", [None])[0]
+    sunrise = sunrise_value.split("T", maxsplit=1)[1][:5] if sunrise_value and "T" in sunrise_value else None
     sunset = sunset_value.split("T", maxsplit=1)[1][:5] if sunset_value and "T" in sunset_value else None
+    raw_hourly = data.get("hourly", {})
+    hourly_values: list[ForecastHour] = []
+    times = raw_hourly.get("time", [])
+    current_time = raw.get("time", "")
+    current_hour = int(current_time[11:13]) if len(current_time) >= 13 else -1
+
+    for index, timestamp in enumerate(times):
+        hour_number = int(timestamp[11:13]) if len(timestamp) >= 13 else -1
+        if timestamp[:10] == local_date and hour_number < current_hour:
+            continue
+        try:
+            hourly_values.append(
+                ForecastHour(
+                    time=timestamp[11:16],
+                    temperature=raw_hourly["temperature_2m"][index],
+                    feels_like=raw_hourly.get("apparent_temperature", [None] * len(times))[index],
+                    precipitation_probability=raw_hourly.get("precipitation_probability", [None] * len(times))[index],
+                    wind_speed=raw_hourly.get("wind_speed_10m", [None] * len(times))[index],
+                    wind_direction=raw_hourly.get("wind_direction_10m", [None] * len(times))[index],
+                    weather=describe_weather(raw_hourly["weather_code"][index], bool(raw_hourly.get("is_day", [1] * len(times))[index])),
+                    is_day=bool(raw_hourly.get("is_day", [1] * len(times))[index]),
+                )
+            )
+        except (IndexError, KeyError, TypeError):
+            continue
+
+    daily = data.get("daily", {})
+    max_temps = daily.get("temperature_2m_max", [])
+    min_temps = daily.get("temperature_2m_min", [])
+    plans = {key: build_plan(current, key) for key in ("outdoor", "indoor", "surprise")}
+    quests = {key: build_quest(current, key, local_date) for key in ("outdoor", "indoor", "surprise")}
 
     return WeatherPayload(
         city=city,
         timezone=data.get("timezone", "Europe/Stockholm"),
         date=local_date,
+        sunrise=sunrise,
         sunset=sunset,
+        temperature_min=min_temps[0] if min_temps else None,
+        temperature_max=max_temps[0] if max_temps else None,
         refreshed_at=datetime.now(UTC).isoformat(),
+        headline=build_headline(current, mood, sunset),
         current=current,
         weather=mood,
         survival=calculate_survival(current),
-        plan=build_plan(current, mode),
-        quest=build_quest(current, mode, local_date),
+        plan=plans[mode],
+        quest=quests[mode],
+        plans=plans,
+        quests=quests,
         dj=build_dj(current),
+        hourly=hourly_values,
+        outdoor_window=build_outdoor_window(hourly_values, sunrise, sunset),
     )
 
 
@@ -451,9 +565,10 @@ async def get_weather(
         "latitude": latitude,
         "longitude": longitude,
         "current": CURRENT_FIELDS,
-        "daily": "sunset",
+        "hourly": HOURLY_FIELDS,
+        "daily": "sunrise,sunset,temperature_2m_min,temperature_2m_max",
         "timezone": "auto",
-        "forecast_days": 1,
+        "forecast_hours": 24,
     }
     try:
         async with httpx.AsyncClient(timeout=12) as client:
