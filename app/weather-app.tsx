@@ -270,6 +270,7 @@ export default function WeatherApp() {
   const date = now ? formatTime(now, { weekday: "long", day: "numeric", month: "long" }, weather?.timezone ?? coordinates.timezone ?? "Europe/Stockholm", preferences.language) : "";
   const condition = weather?.weather;
   const weatherMood = condition?.mood.replace(/[^a-z-]/g, "") ?? "cloud";
+  const displayLocation = (weather?.city ?? coordinates.name).split(",")[0].trim();
   const selectedPlan = weather?.plans[mode] ?? weather?.plan;
   const selectedQuest = weather?.quests[mode] ?? weather?.quest;
   const heroHeadline = weather?.headline
@@ -401,7 +402,7 @@ export default function WeatherApp() {
         <a className="brand" href="#top" aria-label="Vädervett, startsida"><span className="brand-mark">V</span><span>VÄDERVETT</span></a>
         <div className="topbar-note"><span className={`live-dot${isRefreshing ? " is-refreshing" : ""}`} /><span>{isRefreshing ? "LIVE · HÄMTAR" : "SVERIGE, JUST NU"}</span></div>
         <div className="header-actions">
-          <span className="location-label"><span aria-hidden="true">⌖</span>{weather?.city ?? coordinates.name}</span>
+          <span className="location-label"><span aria-hidden="true">⌖</span>{displayLocation}</span>
           <button className="location-button" onClick={useMyLocation} disabled={isLocating} title={t.permission}><span aria-hidden="true">◎</span>{isLocating ? t.locating : t.locate}</button>
         </div>
       </header>
@@ -415,10 +416,10 @@ export default function WeatherApp() {
           {cityResults.length ? <div className="city-results" role="listbox" aria-label={t.nearby}>{cityResults.map((city) => <button key={`${city.latitude}-${city.longitude}`} onClick={() => chooseLocation(city)}>{city.name}<span>{city.timezone}</span></button>)}</div> : null}
         </section>
 
-        <section className={`weather-hero editorial-hero weather-hero--${weatherMood}`} aria-label={`${t.current} ${weather?.city ?? coordinates.name}`}>
+        <section className={`weather-hero editorial-hero weather-hero--${weatherMood}`} aria-label={`${t.current} ${displayLocation}`}>
           <div className={`weather-atmosphere atmosphere--${weatherMood}`} aria-hidden="true"><span className="weather-sun" /><span className="weather-cloud" /><i className="weather-particle" /><i className="weather-particle" /><i className="weather-particle" /><i className="weather-particle" /><i className="weather-particle" /></div>
           <div className="weather-main">
-            <p className="eyebrow eyebrow--light">{t.current} {weather?.city.toUpperCase() ?? coordinates.name.toUpperCase()} <span className="live-pip" /></p>
+            <p className="eyebrow eyebrow--light">{t.current} {displayLocation.toUpperCase()} <span className="live-pip" /></p>
             <div className="weather-reading"><span className="weather-icon" aria-hidden="true">{condition?.icon ?? "◌"}</span><span className="temperature-value" aria-label={weather ? `${temperatureValue(weather.current.temperature, preferences.temperature_unit)} degrees` : "Loading temperature"}>{weather ? `${temperatureValue(weather.current.temperature, preferences.temperature_unit)}°` : "—°"}</span></div>
             <h2 className="weather-description">{condition ? localize(condition.label, preferences.language) : (preferences.language === "sv" ? "Hämtar vädret" : "Getting the weather")}</h2>
             <p className="weather-feels">{weather ? `${t.feels} ${temperatureValue(weather.current.feels_like, preferences.temperature_unit)}°` : t.loading}{weather && weather.temperature_min !== null && weather.temperature_max !== null ? ` · ${temperatureValue(weather.temperature_min, preferences.temperature_unit)}° / ${temperatureValue(weather.temperature_max, preferences.temperature_unit)}°` : ""}</p>
