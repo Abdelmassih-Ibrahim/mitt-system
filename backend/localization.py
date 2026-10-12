@@ -128,6 +128,8 @@ def _translate_string(value: str) -> str:
         return value.replace("Det känns som ", "Feels like ", 1)
     if value.startswith("Vinden ligger på "):
         return value.replace("Vinden ligger på ", "Wind is ", 1)
+    if value.startswith("En stilla dag. Dagsljuset räcker till "):
+        return value.replace("En stilla dag. Dagsljuset räcker till ", "A quiet day. Daylight lasts until ", 1)
     if value.endswith(" mm nederbörd nyligen."):
         return value.replace(" mm nederbörd nyligen.", " mm of recent precipitation.")
     if value.startswith("En kortare lucka med dagsljus"):
