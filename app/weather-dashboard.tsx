@@ -48,6 +48,15 @@ const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? "http://127.0.0.1:8000";
 const STOCKHOLM: Coordinates = { latitude: 59.3293, longitude: 18.0686, name: "Stockholm" };
 const REFRESH_INTERVAL = 15 * 60 * 1000;
 const PARTICLE_COUNT = 20;
+const PARTICLE_POSITIONS = Array.from({ length: PARTICLE_COUNT }, (_, index) => ({
+  key: index,
+  style: {
+    left: `${(index * 37) % 100}%`,
+    top: `${(index * 53) % 100}%`,
+    animationDelay: `${-(index % 8) * 0.47}s`,
+    animationDuration: `${1.7 + (index % 5) * 0.31}s`,
+  },
+}));
 
 function formatTime(date: Date, options: Intl.DateTimeFormatOptions, timeZone: string) {
   return new Intl.DateTimeFormat("sv-SE", { ...options, timeZone }).format(date);
@@ -273,19 +282,6 @@ export default function WeatherDashboard() {
   };
 
   const current = weather?.current;
-  const particles = Array.from({ length: PARTICLE_COUNT }, (_, index) => (
-    <span
-      className="weather-particle"
-      key={index}
-      style={{
-        left: `${(index * 37) % 100}%`,
-        top: `${(index * 53) % 100}%`,
-        animationDelay: `${-(index % 8) * 0.47}s`,
-        animationDuration: `${1.7 + (index % 5) * 0.31}s`,
-      }}
-    />
-  ));
-
   return (
     <main className={`survival-app weather-scene--${safeMood}`}>
       <header className="topbar">
@@ -316,7 +312,8 @@ export default function WeatherDashboard() {
           aria-label={`Aktuellt väder i ${weather?.city ?? coordinates.name}`}
         >
           <div className={`weather-atmosphere atmosphere--${safeMood}`} aria-hidden="true">
-            <span className="weather-sun" /><span className="weather-cloud" />{particles}
+            <span className="weather-sun" /><span className="weather-cloud" />
+            {PARTICLE_POSITIONS.map((particle) => <span className="weather-particle" key={particle.key} style={particle.style} />)}
           </div>
           <div className="weather-main">
             <p className="eyebrow eyebrow--light">VÄDRET JUST NU <span className="live-pip" /></p>
@@ -417,7 +414,7 @@ export default function WeatherDashboard() {
 
         <section className="quest-dj-grid" aria-label="Dagens uppdrag och vädermusik">
           <article className="quest-panel">
-            <div className="section-kicker"><span className="neon-chip">03 / SIDOUppDRAG</span><span className="section-kicker-line" /></div>
+            <div className="section-kicker"><span className="neon-chip">03 / SIDOPPDRAG</span><span className="section-kicker-line" /></div>
             <div className="quest-heading"><span className="quest-emblem" aria-hidden="true">✳</span><div><p className="eyebrow">DAGENS LILLA ÄVENTYR</p><h2>{weather?.quest.title ?? "Ett uppdrag väntar på vädret."}</h2></div></div>
             <p className="quest-description">{weather?.quest.description ?? "När Pythonvädret har laddat får du ett mikroäventyr att ta med ut."}</p>
             <div className="quest-reward"><span aria-hidden="true">✦</span>{weather?.quest.reward ?? "+1 nyfikenhet"}</div>
