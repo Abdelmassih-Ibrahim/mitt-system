@@ -88,7 +88,7 @@ def classify_place(tags: dict[str, str]) -> str:
 
 def weather_reason(category: str, wet: bool, cold: bool, windy: bool) -> str:
     if category == "Kafé":
-        return "En varm paus nära till hands." if wet or cold else "En fin omväg för dagens kaffepaus."
+        return "En varm paus under tak nära till hands." if wet or cold else "En fin omväg för dagens kaffepaus."
     if category in {"Museum", "Bibliotek", "Biograf", "Kultur", "Saluhall / marknad"}:
         return "Skönt tak över huvudet när vädret är ruggigt." if wet or cold or windy else "Ett inomhusalternativ nära din promenad."
     return "Ett ställe värt att upptäcka i dag."
