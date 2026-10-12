@@ -168,6 +168,7 @@ export default function WeatherApp() {
   const [isLocating, setIsLocating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
   const [capsuleNote, setCapsuleNote] = useState("");
   const [cityQuery, setCityQuery] = useState("");
@@ -203,7 +204,7 @@ export default function WeatherApp() {
     const controller = new AbortController();
     const params = new URLSearchParams({
       latitude: String(coordinates.latitude), longitude: String(coordinates.longitude),
-      city: coordinates.name, mode,
+      city: coordinates.name, mode: "outdoor",
       thermal_sensitivity: preferences.thermal_sensitivity,
     });
     Promise.resolve().then(() => {
@@ -228,15 +229,12 @@ export default function WeatherApp() {
         setStatusMessage(t.unavailable);
       })
       .finally(() => { if (!controller.signal.aborted) setIsRefreshing(false); });
-    const timer = window.setInterval(() => window.dispatchEvent(new Event("weather-refresh")), REFRESH_INTERVAL);
-    const refresh = () => window.location.reload();
-    window.addEventListener("weather-refresh", refresh, { once: true });
+    const timer = window.setInterval(() => setRefreshToken((value) => value + 1), REFRESH_INTERVAL);
     return () => {
       controller.abort();
       window.clearInterval(timer);
-      window.removeEventListener("weather-refresh", refresh);
     };
-  }, [coordinates, mode, preferences.thermal_sensitivity, t.unavailable]);
+  }, [coordinates, preferences.thermal_sensitivity, refreshToken, t.unavailable]);
 
   const localTime = now ? formatTime(now, { hour: "2-digit", minute: "2-digit" }, weather?.timezone ?? coordinates.timezone ?? "Europe/Stockholm", preferences.language) : "--:--";
   const seconds = now ? formatTime(now, { second: "2-digit" }, weather?.timezone ?? coordinates.timezone ?? "Europe/Stockholm", preferences.language) : "--";
@@ -368,7 +366,7 @@ export default function WeatherApp() {
             <p className="weather-feels">{weather ? `${t.feels} ${temperatureValue(weather.current.feels_like, preferences.temperature_unit)}°` : t.loading}{weather && weather.temperature_min !== null && weather.temperature_max !== null ? ` · ${temperatureValue(weather.temperature_min, preferences.temperature_unit)}° / ${temperatureValue(weather.temperature_max, preferences.temperature_unit)}°` : ""}</p>
             <div className="weather-stats"><div><small>{t.wind}</small><strong>{weather ? `${Math.round(weather.current.wind_speed)} km/h ${windDirection(weather.current.wind_direction)}` : "—"}</strong></div><div><small>{t.humidity}</small><strong>{weather ? `${weather.current.humidity}%` : "—"}</strong></div><div><small>{t.sunrise}</small><strong>{weather?.sunrise ?? "—"}</strong></div><div><small>{t.sunset}</small><strong>{weather?.sunset ?? "—"}</strong></div></div>
           </div>
-          <div className="weather-hero-side"><aside className="clock-panel"><span className="clock-live"><i /> LIVE · {weather?.timezone.replace("Europe/", "") ?? "SVERIGE"}</span><div className="clock-time"><span>{localTime}</span><small>{seconds}</small></div><p>{date}</p></aside><div className="weather-source"><span>{isRefreshing ? t.loading : `${t.status} ${lastUpdated ? formatTime(lastUpdated, { hour: "2-digit", minute: "2-digit" }, weather?.timezone ?? "Europe/Stockholm", preferences.language) : ""}`}</span><button className="refresh-button" onClick={() => window.dispatchEvent(new Event("weather-refresh"))} disabled={isRefreshing}>{t.refresh} ↻</button></div></div>
+          <div className="weather-hero-side"><aside className="clock-panel"><span className="clock-live"><i /> LIVE · {weather?.timezone.replace("Europe/", "") ?? "SVERIGE"}</span><div className="clock-time"><span>{localTime}</span><small>{seconds}</small></div><p>{date}</p></aside><div className="weather-source"><span>{isRefreshing ? t.loading : `${t.status} ${lastUpdated ? formatTime(lastUpdated, { hour: "2-digit", minute: "2-digit" }, weather?.timezone ?? "Europe/Stockholm", preferences.language) : ""}`}</span><button className="refresh-button" onClick={() => setRefreshToken((value) => value + 1)} disabled={isRefreshing}>{t.refresh} ↻</button></div></div>
         </section>
         {statusMessage ? <p className="status-message" role="status">{statusMessage}</p> : null}
 
@@ -386,7 +384,7 @@ export default function WeatherApp() {
         {weather ? <HourlyForecast hours={weather.hourly} window={weather.outdoor_window} language={preferences.language} unit={preferences.temperature_unit} /> : null}
         <NearbyPlaces coordinates={coordinates} weather={weather} radius={preferences.walking_distance_meters} language={preferences.language} />
 
-        <PreferencesPanel value={preferences} onSave={savePreferences} isSaving={isSavingPreferences} onSaved={setStatusMessage} onError={setStatusMessage} />
+        <PreferencesPanel key={JSON.stringify(preferences)} value={preferences} onSave={savePreferences} isSaving={isSavingPreferences} onSaved={setStatusMessage} onError={setStatusMessage} />
 
         <section className="capsule-section" aria-labelledby="capsules-title"><div className="capsule-heading"><div><p className="eyebrow">{t.capsules}</p><h2 id="capsules-title">{t.capsuleIntro}</h2></div><div className="capsule-input-row"><label className="visually-hidden" htmlFor="capsule-note">{t.capsulePlaceholder}</label><input id="capsule-note" value={capsuleNote} maxLength={280} onChange={(event) => setCapsuleNote(event.target.value)} placeholder={t.capsulePlaceholder} /><button onClick={() => void saveCapsule()} disabled={!weather || isSaving}>{isSaving ? t.saving : t.saveCapsule}</button></div></div><div className="capsule-list">{capsules.length ? capsules.slice(0, 4).map((capsule) => <article className="capsule-item" key={capsule.id}><span>{capsuleDate(capsule.saved_at, preferences.language)}</span><strong>{capsule.city} · {temperatureValue(capsule.temperature, preferences.temperature_unit)}° · {localize(capsule.condition, preferences.language)}</strong><p>{localize(capsule.quest, preferences.language)}{capsule.note ? ` · “${capsule.note}”` : ""}</p><button onClick={() => void deleteCapsule(capsule.id)} aria-label={`${t.delete} ${capsule.city}`}>{t.delete}</button></article>) : <p className="capsule-empty">{t.emptyCapsules}</p>}</div></section>
 
