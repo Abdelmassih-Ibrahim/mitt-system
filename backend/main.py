@@ -675,10 +675,12 @@ async def get_nearby_places(
             budget,
         )
     except httpx.HTTPError as error:
-        raise HTTPException(
-            status_code=502,
-            detail="Karttjänsten svarar inte just nu. Försök igen lite senare.",
-        ) from error
+        return PlaceSearchResult(
+            places=[],
+            radius_meters=radius_meters,
+            available=False,
+            message="Karttjänsten svarar inte just nu. Försök igen lite senare.",
+        )
 
 
 @app.get("/api/preferences", response_model=AppPreferences)

@@ -15,6 +15,7 @@ const copy = {
     loading: "Letar efter riktiga platser i närheten…",
     empty: "Hittade inga kartlagda platser inom den valda radien.",
     error: "Karttjänsten svarar inte just nu. Försök igen om en stund.",
+    serviceMessage: "Karttjänsten svarar inte just nu. Försök igen lite senare.",
     retry: "Försök igen",
     directions: "Vägbeskrivning",
     map: "Visa karta",
@@ -37,6 +38,7 @@ const copy = {
     loading: "Finding real places nearby…",
     empty: "No mapped places found within this radius.",
     error: "The map service is temporarily unavailable. Try again shortly.",
+    serviceMessage: "The map service is temporarily unavailable. Try again shortly.",
     retry: "Try again",
     directions: "Directions",
     map: "View map",
@@ -120,9 +122,12 @@ export default function NearbyPlaces({
       .then(async (response) => {
         if (!response) return { places: [] as NearbyPlace[] };
         if (!response.ok) throw new Error("places-unavailable");
-        return response.json() as Promise<{ places: NearbyPlace[] }>;
+        return response.json() as Promise<{ places: NearbyPlace[]; available?: boolean; message?: string | null }>;
       })
-      .then((result) => setPlaces(result.places))
+      .then((result) => {
+        setPlaces(result.places);
+        if (result.available === false) setError(text.serviceMessage);
+      })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof Error && fetchError.name === "AbortError") return;
         setError(text.error);

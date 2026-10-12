@@ -45,6 +45,8 @@ class NearbyPlace(BaseModel):
 class PlaceSearchResult(BaseModel):
     places: list[NearbyPlace]
     radius_meters: int
+    available: bool = True
+    message: str | None = None
     source: str = "OpenStreetMap contributors"
     source_url: str = "https://www.openstreetmap.org/copyright"
     data_timestamp: str | None = None
