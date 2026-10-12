@@ -9,6 +9,7 @@ import type { Capsule, Coordinates, Language, Mode, Preferences, WeatherPayload 
 const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? "http://127.0.0.1:8000";
 const STOCKHOLM: Coordinates = { latitude: 59.3293, longitude: 18.0686, name: "Stockholm", timezone: "Europe/Stockholm" };
 const DEFAULT_PREFERENCES: Preferences = {
+  location_name: "Stockholm", latitude: 59.3293, longitude: 18.0686, timezone: "Europe/Stockholm",
   language: "sv", temperature_unit: "celsius", thermal_sensitivity: "neutral",
   preferred_mode: "outdoor", walking_distance_meters: 1500, budget: "free",
   interests: ["coffee", "nature", "culture"],
@@ -160,6 +161,7 @@ export default function WeatherApp() {
   const [coordinates, setCoordinates] = useState(STOCKHOLM);
   const [weather, setWeather] = useState<WeatherPayload | null>(null);
   const [capsules, setCapsules] = useState<Capsule[]>([]);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [mode, setMode] = useState<Mode>("outdoor");
   const [now, setNow] = useState<Date | null>(null);
@@ -189,20 +191,38 @@ export default function WeatherApp() {
   }, [preferences.language]);
 
   useEffect(() => {
+    const storageKey = "vadervett-browser-id";
+    let id = window.localStorage.getItem(storageKey);
+    if (!id) {
+      id = window.crypto.randomUUID();
+      window.localStorage.setItem(storageKey, id);
+    }
+    setClientId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!clientId) return;
     let active = true;
+    const headers = { "X-Client-ID": clientId };
     Promise.all([
-      fetch(`${API_BASE}/api/preferences`, { cache: "no-store" }).then((response) => response.ok ? response.json() as Promise<Preferences> : DEFAULT_PREFERENCES),
-      fetch(`${API_BASE}/api/capsules`, { cache: "no-store" }).then((response) => response.ok ? response.json() as Promise<Capsule[]> : []),
+      fetch(`${API_BASE}/api/preferences`, { cache: "no-store", headers }).then((response) => response.ok ? response.json() as Promise<Preferences> : DEFAULT_PREFERENCES),
+      fetch(`${API_BASE}/api/capsules`, { cache: "no-store", headers }).then((response) => response.ok ? response.json() as Promise<Capsule[]> : []),
     ]).then(([savedPreferences, savedCapsules]) => {
       if (!active) return;
       setPreferences(savedPreferences);
       setMode(savedPreferences.preferred_mode);
+      setCoordinates({
+        name: savedPreferences.location_name,
+        latitude: savedPreferences.latitude,
+        longitude: savedPreferences.longitude,
+        timezone: savedPreferences.timezone,
+      });
       setCapsules(savedCapsules);
     }).catch(() => {
       if (active) setStatusMessage("Python API is not available yet.");
     });
     return () => { active = false; };
-  }, []);
+  }, [clientId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -263,7 +283,14 @@ export default function WeatherApp() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       ({ coords: position }) => {
-        setCoordinates({ latitude: position.latitude, longitude: position.longitude, name: "Min plats" });
+        const location = {
+          name: preferences.language === "sv" ? "Min plats" : "My location",
+          latitude: position.latitude,
+          longitude: position.longitude,
+          timezone: weather?.timezone ?? "Europe/Stockholm",
+        };
+        setCoordinates(location);
+        void savePreferences({ ...preferences, location_name: location.name, latitude: location.latitude, longitude: location.longitude, timezone: location.timezone });
         setIsLocating(false);
       },
       () => {
@@ -294,16 +321,31 @@ export default function WeatherApp() {
     }
   };
 
+  const chooseLocation = (location: Coordinates) => {
+    setCoordinates(location);
+    setCityResults([]);
+    setCityQuery("");
+    void savePreferences({
+      ...preferences,
+      location_name: location.name,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      timezone: location.timezone ?? "Europe/Stockholm",
+    }).catch(() => setStatusMessage(t.saveFailed));
+  };
+
   const savePreferences = async (next: Preferences) => {
+    if (!clientId) throw new Error("browser-id-not-ready");
     setIsSavingPreferences(true);
     try {
       const response = await fetch(`${API_BASE}/api/preferences`, {
-        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(next),
+        method: "PUT", headers: { "Content-Type": "application/json", "X-Client-ID": clientId ?? "" }, body: JSON.stringify(next),
       });
       if (!response.ok) throw new Error("preferences-invalid");
       const saved = await response.json() as Preferences;
       setPreferences(saved);
       setMode(saved.preferred_mode);
+      setCoordinates({ name: saved.location_name, latitude: saved.latitude, longitude: saved.longitude, timezone: saved.timezone });
     } finally {
       setIsSavingPreferences(false);
     }
@@ -314,7 +356,7 @@ export default function WeatherApp() {
     setIsSaving(true);
     try {
       const response = await fetch(`${API_BASE}/api/capsules`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", "X-Client-ID": clientId ?? "" },
         body: JSON.stringify({
           city: weather.city, temperature: weather.current.temperature,
           condition: weather.weather.label, quest: selectedQuest.title, note: capsuleNote,
@@ -334,7 +376,7 @@ export default function WeatherApp() {
 
   const deleteCapsule = async (id: number) => {
     try {
-      const response = await fetch(`${API_BASE}/api/capsules/${id}`, { method: "DELETE" });
+      const response = await fetch(`${API_BASE}/api/capsules/${id}`, { method: "DELETE", headers: { "X-Client-ID": clientId ?? "" } });
       if (!response.ok) throw new Error("capsule-delete-failed");
       setCapsules((existing) => existing.filter((capsule) => capsule.id !== id));
     } catch {
@@ -359,7 +401,7 @@ export default function WeatherApp() {
           <div className="intro-heading-row"><h1>{heroHeadline}</h1><time className="intro-clock" aria-label={`${date} ${localTime}`}><span>{localTime}</span><small>{seconds}</small><span className="intro-clock-date">{date}</span></time></div>
           <div className="intro-bottom-row"><p>{t.intro}</p><form className="city-search" onSubmit={(event) => void searchCities(event)}><label className="visually-hidden" htmlFor="city-search-input">{t.find}</label><input id="city-search-input" value={cityQuery} onChange={(event) => setCityQuery(event.target.value)} placeholder={t.searchPlaceholder} /><button type="submit" disabled={searchingCities}>{searchingCities ? "…" : t.find}</button></form></div>
           {citySearchError ? <p className="inline-error" role="status">{citySearchError}</p> : null}
-          {cityResults.length ? <div className="city-results" role="listbox" aria-label={t.nearby}>{cityResults.map((city) => <button key={`${city.latitude}-${city.longitude}`} onClick={() => { setCoordinates(city); setCityResults([]); setCityQuery(""); }}>{city.name}<span>{city.timezone}</span></button>)}</div> : null}
+          {cityResults.length ? <div className="city-results" role="listbox" aria-label={t.nearby}>{cityResults.map((city) => <button key={`${city.latitude}-${city.longitude}`} onClick={() => chooseLocation(city)}>{city.name}<span>{city.timezone}</span></button>)}</div> : null}
         </section>
 
         <section className={`weather-hero editorial-hero weather-hero--${weatherMood}`} aria-label={`${t.current} ${weather?.city ?? coordinates.name}`}>
@@ -389,9 +431,9 @@ export default function WeatherApp() {
         {weather ? <HourlyForecast hours={weather.hourly} window={weather.outdoor_window} language={preferences.language} unit={preferences.temperature_unit} /> : null}
         <NearbyPlaces coordinates={coordinates} weather={weather} radius={preferences.walking_distance_meters} language={preferences.language} budget={preferences.budget} interests={preferences.interests} />
 
-        <PreferencesPanel key={JSON.stringify(preferences)} value={preferences} onSave={savePreferences} isSaving={isSavingPreferences} onSaved={setStatusMessage} onError={setStatusMessage} />
+        <PreferencesPanel key={JSON.stringify(preferences)} value={preferences} onSave={savePreferences} isSaving={isSavingPreferences || !clientId} onSaved={setStatusMessage} onError={setStatusMessage} />
 
-        <section className="capsule-section" aria-labelledby="capsules-title"><div className="capsule-heading"><div><p className="eyebrow">{t.capsules}</p><h2 id="capsules-title">{t.capsuleIntro}</h2></div><div className="capsule-input-row"><label className="visually-hidden" htmlFor="capsule-note">{t.capsulePlaceholder}</label><input id="capsule-note" value={capsuleNote} maxLength={280} onChange={(event) => setCapsuleNote(event.target.value)} placeholder={t.capsulePlaceholder} /><button onClick={() => void saveCapsule()} disabled={!weather || isSaving}>{isSaving ? t.saving : t.saveCapsule}</button></div></div><div className="capsule-list">{capsules.length ? capsules.slice(0, 4).map((capsule) => <article className="capsule-item" key={capsule.id}><span>{capsuleDate(capsule.saved_at, preferences.language)}</span><strong>{capsule.city} · {temperatureValue(capsule.temperature, preferences.temperature_unit)}° · {localize(capsule.condition, preferences.language)}</strong><p>{localize(capsule.quest, preferences.language)}{capsule.note ? ` · “${capsule.note}”` : ""}</p><button onClick={() => void deleteCapsule(capsule.id)} aria-label={`${t.delete} ${capsule.city}`}>{t.delete}</button></article>) : <p className="capsule-empty">{t.emptyCapsules}</p>}</div></section>
+        <section className="capsule-section" aria-labelledby="capsules-title"><div className="capsule-heading"><div><p className="eyebrow">{t.capsules}</p><h2 id="capsules-title">{t.capsuleIntro}</h2></div><div className="capsule-input-row"><label className="visually-hidden" htmlFor="capsule-note">{t.capsulePlaceholder}</label><input id="capsule-note" value={capsuleNote} maxLength={280} onChange={(event) => setCapsuleNote(event.target.value)} placeholder={t.capsulePlaceholder} /><button onClick={() => void saveCapsule()} disabled={!weather || !clientId || isSaving}>{isSaving ? t.saving : t.saveCapsule}</button></div></div><div className="capsule-list">{capsules.length ? capsules.slice(0, 4).map((capsule) => <article className="capsule-item" key={capsule.id}><span>{capsuleDate(capsule.saved_at, preferences.language)}</span><strong>{capsule.city} · {temperatureValue(capsule.temperature, preferences.temperature_unit)}° · {localize(capsule.condition, preferences.language)}</strong><p>{localize(capsule.quest, preferences.language)}{capsule.note ? ` · “${capsule.note}”` : ""}</p><button onClick={() => void deleteCapsule(capsule.id)} aria-label={`${t.delete} ${capsule.city}`}>{t.delete}</button></article>) : <p className="capsule-empty">{t.emptyCapsules}</p>}</div></section>
 
         <footer className="page-footer"><span>VÄDERVETT <span className="footer-mark">/</span> OUTSMART THE WEATHER</span><span>{t.footer} · <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">OPEN-METEO</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OPENSTREETMAP</a></span></footer>
       </div>
