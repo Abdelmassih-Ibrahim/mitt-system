@@ -9,13 +9,18 @@ import httpx
 from pydantic import BaseModel
 
 PlaceCategory = Literal["all", "cafe", "culture"]
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+PlaceInterest = Literal["coffee", "nature", "culture", "shopping", "photography", "fitness"]
+PlaceBudget = Literal["free", "low", "flexible"]
+OVERPASS_URLS = (
+    "https://overpass.private.coffee/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+)
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "Vadervett/0.1 (weather-aware local discovery)"
 CACHE_SECONDS = 600
 
 CATEGORY_FILTERS: dict[PlaceCategory, str] = {
-    "all": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(cafe|library|cinema|arts_centre|marketplace)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];',
+    "all": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(cafe|library|cinema|arts_centre|marketplace)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];nwr(around:{radius},{latitude},{longitude})[name][leisure=park];',
     "cafe": 'nwr(around:{radius},{latitude},{longitude})[name][amenity=cafe];',
     "culture": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(library|cinema|arts_centre|marketplace)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];',
 }
@@ -31,6 +36,7 @@ class NearbyPlace(BaseModel):
     distance_meters: int
     address: str | None
     opening_hours: str | None
+    fee: bool | None
     map_url: str
     directions_url: str
     reason: str
@@ -81,6 +87,8 @@ def classify_place(tags: dict[str, str]) -> str:
         return "Kultur"
     if amenity == "marketplace":
         return "Saluhall / marknad"
+    if tags.get("leisure") == "park":
+        return "Park"
     if tags.get("tourism") == "museum":
         return "Museum"
     return "Inomhusplats"
@@ -91,6 +99,8 @@ def weather_reason(category: str, wet: bool, cold: bool, windy: bool) -> str:
         return "En varm paus under tak nära till hands." if wet or cold else "En fin omväg för dagens kaffepaus."
     if category in {"Museum", "Bibliotek", "Biograf", "Kultur", "Saluhall / marknad"}:
         return "Skönt tak över huvudet när vädret är ruggigt." if wet or cold or windy else "Ett inomhusalternativ nära din promenad."
+    if category == "Park":
+        return "Välj en kort slinga i dagsljus och kontrollera regnrisken först." if wet or cold or windy else "Ett grönt andrum nära dig när vädret tillåter."
     return "Ett ställe värt att upptäcka i dag."
 
 
@@ -103,6 +113,8 @@ def localize_reason(reason: str, language: Literal["sv", "en"]) -> str:
         "Skönt tak över huvudet när vädret är ruggigt.": "A comfortable roof over your head in rough weather.",
         "Ett inomhusalternativ nära din promenad.": "An indoor option near your walk.",
         "Ett ställe värt att upptäcka i dag.": "A place worth discovering today.",
+        "Välj en kort slinga i dagsljus och kontrollera regnrisken först.": "Choose a short loop in daylight and check the rain chance first.",
+        "Ett grönt andrum nära dig när vädret tillåter.": "A green pause nearby when conditions allow.",
     }
     return translations.get(reason, reason)
 
@@ -117,8 +129,10 @@ def parse_elements(
     wind_speed: float,
     feels_like: float,
     language: Literal["sv", "en"] = "sv",
+    interests: list[PlaceInterest] | None = None,
+    budget: PlaceBudget = "free",
 ) -> list[NearbyPlace]:
-    places: list[NearbyPlace] = []
+    ranked_places: list[tuple[int, NearbyPlace]] = []
     wet = precipitation_probability >= 40 or 51 <= weather_code <= 82 or weather_code >= 95
     cold = feels_like <= 5
     windy = wind_speed >= 30
@@ -130,6 +144,11 @@ def parse_elements(
         place_latitude = location.get("lat")
         place_longitude = location.get("lon")
         if not name or place_latitude is None or place_longitude is None:
+            continue
+
+        fee_tag = tags.get("fee")
+        has_fee = True if fee_tag == "yes" else False if fee_tag == "no" else None
+        if budget == "free" and has_fee is True:
             continue
 
         distance = haversine_meters(latitude, longitude, place_latitude, place_longitude)
@@ -147,27 +166,41 @@ def parse_elements(
         if not isinstance(osm_id, int):
             continue
 
-        places.append(
-            NearbyPlace(
+        category_label = classify_place(tags)
+        place = NearbyPlace(
                 osm_type=place_type,
                 osm_id=osm_id,
                 name=name,
-                category=classify_place(tags),
+                category=category_label,
                 latitude=place_latitude,
                 longitude=place_longitude,
                 distance_meters=round(distance),
                 address=address or None,
                 opening_hours=tags.get("opening_hours"),
+                fee=has_fee,
                 map_url=f"https://www.openstreetmap.org/{quote(place_type)}/{osm_id}",
                 directions_url=(
                     "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route="
                     f"{latitude}%2C{longitude}%3B{place_latitude}%2C{place_longitude}"
                 ),
-                reason=localize_reason(weather_reason(classify_place(tags), wet, cold, windy), language),
+                reason=localize_reason(weather_reason(category_label, wet, cold, windy), language),
             )
-        )
+        interest_set = set(interests or [])
+        rank = 0
+        if "coffee" in interest_set and category_label == "Kafé":
+            rank += 4
+        if "nature" in interest_set and category_label == "Park":
+            rank += 4
+        if "culture" in interest_set and category_label in {"Museum", "Bibliotek", "Biograf", "Kultur"}:
+            rank += 4
+        if "shopping" in interest_set and category_label == "Saluhall / marknad":
+            rank += 4
+        if "photography" in interest_set and category_label in {"Museum", "Park", "Kultur"}:
+            rank += 2
+        ranked_places.append((rank, place))
 
-    return sorted(places, key=lambda place: place.distance_meters)[:20]
+    ranked_places.sort(key=lambda item: (-item[0], item[1].distance_meters))
+    return [place for _, place in ranked_places[:20]]
 
 
 async def find_nearby_places(
@@ -180,10 +213,13 @@ async def find_nearby_places(
     wind_speed: float,
     feels_like: float,
     language: Literal["sv", "en"] = "sv",
+    interests: list[PlaceInterest] | None = None,
+    budget: PlaceBudget = "free",
 ) -> PlaceSearchResult:
     cache_key = (
         round(latitude, 4), round(longitude, 4), radius_meters, category,
         weather_code, precipitation_probability, round(wind_speed), round(feels_like), language,
+        tuple(interests or ()), budget,
     )
     cached = _place_cache.get(cache_key)
     if cached and time.monotonic() - cached[0] < CACHE_SECONDS:
@@ -196,14 +232,25 @@ async def find_nearby_places(
         )
         + ");out center tags;"
     )
-    async with httpx.AsyncClient(timeout=20, headers={"User-Agent": USER_AGENT}) as client:
-        response = await client.post(
-            OVERPASS_URL,
-            data={"data": query},
-            headers={"Accept": "application/json"},
-        )
-        response.raise_for_status()
-        data = response.json()
+    data: dict | None = None
+    last_error: httpx.HTTPError | None = None
+    async with httpx.AsyncClient(timeout=11, headers={"User-Agent": USER_AGENT}) as client:
+        for endpoint in OVERPASS_URLS:
+            try:
+                response = await client.post(
+                    endpoint,
+                    data={"data": query},
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+                break
+            except httpx.HTTPError as error:
+                last_error = error
+    if data is None:
+        if last_error:
+            raise last_error
+        raise httpx.ConnectError("No Overpass endpoint is available")
 
     result = PlaceSearchResult(
         places=parse_elements(
@@ -216,6 +263,8 @@ async def find_nearby_places(
             wind_speed,
             feels_like,
             language,
+            interests,
+            budget,
         ),
         radius_meters=radius_meters,
         data_timestamp=data.get("osm3s", {}).get("timestamp_osm_base"),
