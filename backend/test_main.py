@@ -97,10 +97,20 @@ class WeatherLogicTests(unittest.TestCase):
 
         payload = build_payload(data, "Stockholm", "outdoor")
 
-        self.assertEqual([hour.time for hour in payload.hourly], ["15:00", "16:00"])
+        self.assertEqual(
+            [(hour.date, hour.time) for hour in payload.hourly],
+            [
+                ("2026-10-12", "15:00"),
+                ("2026-10-12", "16:00"),
+                ("2026-10-13", "09:00"),
+                ("2026-10-13", "10:00"),
+            ],
+        )
         self.assertEqual(payload.hourly[0].precipitation_probability, 45)
         self.assertEqual(payload.sunrise, "07:30")
-        self.assertFalse(payload.outdoor_window.available)
+        self.assertTrue(payload.outdoor_window.available)
+        self.assertEqual(payload.outdoor_window.start, "16:00")
+        self.assertEqual(payload.outdoor_window.end, "16:00")
 
     def test_plan_mode_changes_activity(self) -> None:
         current = CurrentConditions(
