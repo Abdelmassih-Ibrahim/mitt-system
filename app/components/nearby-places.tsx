@@ -79,6 +79,7 @@ export default function NearbyPlaces({
       precipitation_probability: String(weather?.hourly[0]?.precipitation_probability ?? 0),
       wind_speed: String(weather?.current.wind_speed ?? 0),
       feels_like: String(weather?.current.feels_like ?? 10),
+      language,
     });
     Promise.resolve().then(() => {
       if (controller.signal.aborted) return null;

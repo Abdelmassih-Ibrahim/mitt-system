@@ -185,6 +185,10 @@ export default function WeatherApp() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.lang = preferences.language;
+  }, [preferences.language]);
+
+  useEffect(() => {
     let active = true;
     Promise.all([
       fetch(`${API_BASE}/api/preferences`, { cache: "no-store" }).then((response) => response.ok ? response.json() as Promise<Preferences> : DEFAULT_PREFERENCES),
@@ -206,6 +210,7 @@ export default function WeatherApp() {
       latitude: String(coordinates.latitude), longitude: String(coordinates.longitude),
       city: coordinates.name, mode: "outdoor",
       thermal_sensitivity: preferences.thermal_sensitivity,
+      language: preferences.language,
     });
     Promise.resolve().then(() => {
       if (controller.signal.aborted) return null;
@@ -234,7 +239,7 @@ export default function WeatherApp() {
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [coordinates, preferences.thermal_sensitivity, refreshToken, t.unavailable]);
+  }, [coordinates, preferences.language, preferences.thermal_sensitivity, refreshToken, t.unavailable]);
 
   const localTime = now ? formatTime(now, { hour: "2-digit", minute: "2-digit" }, weather?.timezone ?? coordinates.timezone ?? "Europe/Stockholm", preferences.language) : "--:--";
   const seconds = now ? formatTime(now, { second: "2-digit" }, weather?.timezone ?? coordinates.timezone ?? "Europe/Stockholm", preferences.language) : "--";
@@ -275,7 +280,7 @@ export default function WeatherApp() {
     setSearchingCities(true);
     setCitySearchError("");
     try {
-      const response = await fetch(`${API_BASE}/api/locations/search?${new URLSearchParams({ query: cityQuery.trim() })}`);
+      const response = await fetch(`${API_BASE}/api/locations/search?${new URLSearchParams({ query: cityQuery.trim(), language: preferences.language })}`);
       if (!response.ok) throw new Error("city-search-failed");
       const results = await response.json() as Array<{ name: string; admin1: string | null; latitude: number; longitude: number; timezone: string }>;
       setCityResults(results.map((result) => ({
