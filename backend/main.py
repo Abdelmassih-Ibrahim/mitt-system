@@ -470,11 +470,14 @@ def build_outdoor_window(
             longest_end = end_hour
 
     if longest_length < 2:
+        single_end = f"{(int(longest_end.time[:2]) + 1) % 24:02d}:00"
+        if sunset and single_end > sunset:
+            single_end = sunset
         return OutdoorWindow(
             available=True,
             date=forecast_date,
             start=longest_start.time,
-            end=longest_end.time,
+            end=single_end,
             explanation=f"En kortare lucka med dagsljus och högst 30 % nederbördsrisk. Soluppgång {sunrise or 'saknas'}, solnedgång {sunset or 'saknas'}.",
         )
 

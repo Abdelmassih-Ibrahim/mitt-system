@@ -110,7 +110,7 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual(payload.sunrise, "07:30")
         self.assertTrue(payload.outdoor_window.available)
         self.assertEqual(payload.outdoor_window.start, "16:00")
-        self.assertEqual(payload.outdoor_window.end, "16:00")
+        self.assertEqual(payload.outdoor_window.end, "17:00")
 
     def test_plan_mode_changes_activity(self) -> None:
         current = CurrentConditions(
