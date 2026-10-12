@@ -4,6 +4,7 @@ import os
 import random
 import sqlite3
 import json
+from uuid import UUID
 from contextlib import asynccontextmanager, closing
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,7 +12,7 @@ from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from backend.places import PlaceBudget, PlaceCategory, PlaceInterest, PlaceSearchResult, find_nearby_places, search_cities
@@ -218,6 +219,7 @@ def initialize_database() -> None:
             """
             CREATE TABLE IF NOT EXISTS capsules (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id TEXT NOT NULL DEFAULT 'legacy',
                 city TEXT NOT NULL,
                 temperature REAL NOT NULL,
                 condition TEXT NOT NULL,
@@ -230,6 +232,14 @@ def initialize_database() -> None:
         connection.execute(
             "CREATE TABLE IF NOT EXISTS app_preferences (id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL)"
         )
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS user_preferences (client_id TEXT PRIMARY KEY, data TEXT NOT NULL)"
+        )
+        capsule_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(capsules)").fetchall()
+        }
+        if "client_id" not in capsule_columns:
+            connection.execute("ALTER TABLE capsules ADD COLUMN client_id TEXT NOT NULL DEFAULT 'legacy'")
 
 
 def describe_weather(code: int, is_day: bool) -> WeatherMood:
