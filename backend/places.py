@@ -102,10 +102,11 @@ def parse_elements(
     weather_code: int,
     precipitation_probability: int,
     wind_speed: float,
+    feels_like: float,
 ) -> list[NearbyPlace]:
     places: list[NearbyPlace] = []
     wet = precipitation_probability >= 40 or 51 <= weather_code <= 82 or weather_code >= 95
-    cold = False
+    cold = feels_like <= 5
     windy = wind_speed >= 30
 
     for element in elements:
@@ -163,6 +164,7 @@ async def find_nearby_places(
     weather_code: int,
     precipitation_probability: int,
     wind_speed: float,
+    feels_like: float,
 ) -> PlaceSearchResult:
     cache_key = (round(latitude, 4), round(longitude, 4), radius_meters, category)
     cached = _place_cache.get(cache_key)
@@ -194,6 +196,7 @@ async def find_nearby_places(
             weather_code,
             precipitation_probability,
             wind_speed,
+            feels_like,
         ),
         radius_meters=radius_meters,
         data_timestamp=data.get("osm3s", {}).get("timestamp_osm_base"),
