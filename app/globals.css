@@ -1244,3 +1244,361 @@ a {
     gap: 8px;
   }
 }
+
+:root {
+  --neon-cyan: #62f5e0;
+  --neon-lime: #d5ff57;
+  --neon-coral: #ff8a72;
+  --night-ink: #101719;
+  --night-panel: #172224;
+  --night-muted: #a0b1ad;
+  --night-line: rgb(186 225 214 / 16%);
+}
+
+html {
+  background: var(--night-ink);
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 14% 4%, rgb(29 104 94 / 22%), transparent 32rem),
+    radial-gradient(ellipse at 90% 38%, rgb(139 105 37 / 10%), transparent 35rem),
+    linear-gradient(145deg, #111a1c, #111819 48%, #171a16);
+  color: #f2f8ef;
+}
+
+.survival-app {
+  background-image: radial-gradient(rgb(168 217 203 / 10%) 0.7px, transparent 0.7px);
+  background-size: 22px 22px;
+}
+
+.topbar {
+  border-bottom-color: var(--night-line);
+  background: rgb(15 23 25 / 82%);
+}
+
+.brand {
+  color: #f2f8ef;
+}
+
+.brand-mark {
+  border: 1px solid rgb(98 245 224 / 50%);
+  background: #102729;
+  color: var(--neon-cyan);
+  box-shadow: 0 0 18px rgb(98 245 224 / 17%), inset 0 0 12px rgb(98 245 224 / 9%);
+}
+
+.topbar-note,
+.page-intro > p:last-child {
+  color: var(--night-muted);
+}
+
+.live-dot {
+  background: var(--neon-cyan);
+  box-shadow: 0 0 9px rgb(98 245 224 / 76%), 0 0 0 4px rgb(98 245 224 / 11%);
+}
+
+.location-label {
+  color: #f0f5ed;
+}
+
+.location-label span,
+.location-button span {
+  color: var(--neon-coral);
+}
+
+.location-button,
+.refresh-button {
+  border-color: rgb(98 245 224 / 33%);
+  background: rgb(21 34 35 / 82%);
+  color: #edf6ef;
+}
+
+.location-button:hover,
+.refresh-button:hover {
+  border-color: var(--neon-cyan);
+  background: #1c3030;
+  box-shadow: 0 0 18px rgb(98 245 224 / 12%);
+}
+
+.location-button:focus-visible,
+.refresh-button:focus-visible {
+  outline-color: var(--neon-lime);
+}
+
+.page-intro .eyebrow,
+.eyebrow {
+  color: #91aaa2;
+}
+
+.page-intro h1 {
+  color: #f3f8ee;
+}
+
+.page-intro h1 span {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 28px rgb(98 245 224 / 27%);
+}
+
+.weather-hero {
+  --weather-accent: var(--neon-cyan);
+  --weather-glow: rgb(62 231 214 / 24%);
+  border: 1px solid rgb(98 245 224 / 25%);
+  border-radius: 8px;
+  background-color: #112b2e;
+  background-image:
+    radial-gradient(ellipse at 13% 25%, var(--weather-glow), transparent 35%),
+    repeating-linear-gradient(111deg, transparent 0 46px, rgb(178 246 232 / 5%) 47px 48px);
+  box-shadow: 0 20px 65px rgb(0 0 0 / 28%), 0 0 38px var(--weather-glow), inset 0 0 35px rgb(114 218 200 / 5%);
+  animation: arrive 650ms ease-out both, rain-drift 24s linear infinite;
+}
+
+.weather-hero::after {
+  border-color: color-mix(in srgb, var(--weather-accent) 26%, transparent);
+  box-shadow: 0 0 50px var(--weather-glow), inset 0 0 50px var(--weather-glow);
+}
+
+.weather-hero--rain {
+  --weather-accent: #62f5e0;
+  --weather-glow: rgb(62 231 214 / 24%);
+  background-color: #10282c;
+}
+
+.weather-hero--clear {
+  --weather-accent: #eaff68;
+  --weather-glow: rgb(234 255 104 / 21%);
+  background-color: #242d1a;
+}
+
+.weather-hero--cloud {
+  --weather-accent: #bdc9ff;
+  --weather-glow: rgb(172 189 255 / 20%);
+  background-color: #202735;
+}
+
+.weather-hero--snow {
+  --weather-accent: #a5f3ff;
+  --weather-glow: rgb(125 228 255 / 21%);
+  background-color: #172b32;
+}
+
+.weather-hero--night {
+  --weather-accent: #d0b6ff;
+  --weather-glow: rgb(160 124 255 / 20%);
+  background-color: #1a1b32;
+}
+
+.eyebrow--light,
+.weather-main .eyebrow {
+  color: var(--weather-accent);
+}
+
+.live-pip {
+  background: var(--weather-accent);
+  box-shadow: 0 0 12px var(--weather-accent), 0 0 0 4px color-mix(in srgb, var(--weather-accent) 14%, transparent);
+}
+
+.weather-icon {
+  filter: drop-shadow(0 0 16px var(--weather-glow));
+}
+
+.temperature-value {
+  color: #f4fff9;
+  text-shadow: 0 0 34px var(--weather-glow);
+}
+
+.weather-description {
+  color: #f2fbf5;
+}
+
+.weather-feels,
+.weather-stats small {
+  color: #b2c6c0;
+}
+
+.stat-symbol {
+  border-color: color-mix(in srgb, var(--weather-accent) 44%, transparent);
+  color: var(--weather-accent);
+  box-shadow: inset 0 0 11px var(--weather-glow), 0 0 13px var(--weather-glow);
+}
+
+.weather-stats strong {
+  color: #f1fbf4;
+}
+
+.clock-panel {
+  border: 1px solid rgb(213 255 87 / 52%);
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgb(27 48 39 / 96%), rgb(20 37 34 / 96%));
+  color: #f2f9df;
+  box-shadow: 0 0 35px rgb(213 255 87 / 10%), inset 0 0 26px rgb(213 255 87 / 5%);
+}
+
+.clock-live,
+.clock-timezone {
+  color: #b4c3b6;
+}
+
+.clock-live {
+  color: var(--neon-lime);
+}
+
+.clock-live-dot {
+  background: var(--neon-lime);
+  box-shadow: 0 0 12px var(--neon-lime);
+}
+
+.clock-time > span {
+  color: var(--neon-lime);
+  text-shadow: 0 0 23px rgb(213 255 87 / 36%);
+}
+
+.clock-time small,
+.clock-date,
+.sunset-row small {
+  color: #b9c9bd;
+}
+
+.clock-rule {
+  background: rgb(213 255 87 / 27%);
+  box-shadow: 0 0 10px rgb(213 255 87 / 12%);
+}
+
+.sunset-icon {
+  color: var(--neon-coral);
+  filter: drop-shadow(0 0 9px rgb(255 138 114 / 35%));
+}
+
+.sunset-row strong {
+  color: #fff0d9;
+}
+
+.hero-coordinate {
+  color: rgb(205 237 226 / 54%);
+}
+
+.update-row {
+  color: #92a69e;
+}
+
+.refresh-button {
+  color: var(--neon-cyan);
+}
+
+.plan-section .eyebrow {
+  color: var(--neon-cyan);
+}
+
+.section-heading h2 {
+  color: #f1f6ed;
+}
+
+.section-aside {
+  color: #9aada5;
+}
+
+.plan-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(193 221 207 / 13%);
+  border-top: 2px solid var(--card-accent, var(--neon-cyan));
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgb(28 40 40 / 96%), rgb(20 29 30 / 98%));
+  box-shadow: 0 12px 34px rgb(0 0 0 / 16%), inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.plan-card::after {
+  position: absolute;
+  top: -42px;
+  right: -42px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--card-accent, var(--neon-cyan));
+  content: "";
+  opacity: 0.07;
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.outfit-card {
+  --card-accent: #62f5e0;
+}
+
+.activity-card {
+  --card-accent: #ff9a78;
+  border-top-color: var(--card-accent);
+  background: linear-gradient(145deg, rgb(40 34 32 / 96%), rgb(27 28 29 / 98%));
+}
+
+.cafe-card {
+  --card-accent: #d5ff57;
+  border-top-color: var(--card-accent);
+  background: linear-gradient(145deg, rgb(36 40 29 / 96%), rgb(25 30 28 / 98%));
+}
+
+.plan-card:hover {
+  border-color: color-mix(in srgb, var(--card-accent) 42%, transparent);
+  box-shadow: 0 15px 42px rgb(0 0 0 / 26%), 0 0 23px color-mix(in srgb, var(--card-accent) 16%, transparent);
+}
+
+.card-number {
+  color: color-mix(in srgb, var(--card-accent) 76%, white);
+}
+
+.card-label {
+  color: #a2b5ad;
+}
+
+.card-icon,
+.activity-icon,
+.cafe-icon {
+  border: 1px solid color-mix(in srgb, var(--card-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--card-accent) 12%, #172120);
+  color: var(--card-accent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--card-accent) 13%, transparent), inset 0 0 12px color-mix(in srgb, var(--card-accent) 8%, transparent);
+}
+
+.plan-card h3 {
+  color: #f0f7ef;
+}
+
+.plan-card p {
+  color: #aebdb6;
+}
+
+.card-tip {
+  color: #dbe8dd;
+}
+
+.tip-dot,
+.activity-card .tip-dot,
+.cafe-card .tip-dot {
+  background: var(--card-accent);
+  box-shadow: 0 0 9px var(--card-accent);
+}
+
+.page-footer {
+  border-top-color: var(--night-line);
+  color: #91a49b;
+}
+
+.page-footer a {
+  color: var(--neon-cyan);
+}
+
+@media (max-width: 760px) {
+  .weather-hero {
+    background-image:
+      radial-gradient(ellipse at 8% 5%, var(--weather-glow), transparent 45%),
+      repeating-linear-gradient(111deg, transparent 0 46px, rgb(178 246 232 / 5%) 47px 48px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weather-hero {
+    animation: arrive 650ms ease-out both;
+  }
+}
