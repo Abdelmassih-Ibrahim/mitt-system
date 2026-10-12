@@ -90,6 +90,10 @@ export type Capsule = {
 };
 
 export type Preferences = {
+  location_name: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
   language: Language;
   temperature_unit: TemperatureUnit;
   thermal_sensitivity: ThermalSensitivity;
@@ -109,6 +113,7 @@ export type NearbyPlace = {
   distance_meters: number;
   address: string | null;
   opening_hours: string | null;
+  fee: boolean | null;
   map_url: string;
   directions_url: string;
   reason: string;

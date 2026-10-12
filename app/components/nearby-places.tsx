@@ -20,6 +20,9 @@ const copy = {
     map: "Visa karta",
     hours: "Kartlagda tider",
     noHours: "Öppettider saknas i kartdatan",
+    feeUnknown: "Avgift okänd",
+    feeYes: "Kartdata anger avgift",
+    feeNo: "Ingen avgift angiven",
     basedOn: "Relevans för dagens väder",
     distance: "från dig",
     attribution: "Kartdata © OpenStreetMap-bidragsgivare",
@@ -39,6 +42,9 @@ const copy = {
     map: "View map",
     hours: "Hours in map data",
     noHours: "Opening hours are not in the map data",
+    feeUnknown: "Fee unknown",
+    feeYes: "Map data lists a fee",
+    feeNo: "No fee listed",
     basedOn: "Why it fits today",
     distance: "away",
     attribution: "Map data © OpenStreetMap contributors",
@@ -50,16 +56,34 @@ function formatDistance(meters: number, language: Language) {
   return `${(meters / 1000).toFixed(1).replace(".", language === "sv" ? "," : ".")} km ${language === "sv" ? "bort" : "away"}`;
 }
 
+function localizeCategory(category: string, language: Language) {
+  if (language === "sv") return category;
+  return ({
+    "Kafé": "Café",
+    "Bibliotek": "Library",
+    "Biograf": "Cinema",
+    "Kultur": "Arts venue",
+    "Saluhall / marknad": "Market",
+    "Museum": "Museum",
+    "Park": "Park",
+    "Inomhusplats": "Indoor place",
+  } as Record<string, string>)[category] ?? category;
+}
+
 export default function NearbyPlaces({
   coordinates,
   weather,
   radius,
   language,
+  budget,
+  interests,
 }: {
   coordinates: Coordinates;
   weather: WeatherPayload | null;
   radius: number;
   language: Language;
+  budget: "free" | "low" | "flexible";
+  interests: string[];
 }) {
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
@@ -80,7 +104,9 @@ export default function NearbyPlaces({
       wind_speed: String(weather?.current.wind_speed ?? 0),
       feels_like: String(weather?.current.feels_like ?? 10),
       language,
+      budget,
     });
+    interests.forEach((interest) => params.append("interests", interest));
     Promise.resolve().then(() => {
       if (controller.signal.aborted) return null;
       setIsLoading(true);
@@ -106,7 +132,7 @@ export default function NearbyPlaces({
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [coordinates, radius, category, weather, attempt, language, text.error]);
+  }, [coordinates, radius, category, weather, attempt, language, text.error, budget, interests]);
 
   const categories: Array<{ id: PlaceCategory; label: string }> = [
     { id: "all", label: text.all },
@@ -142,9 +168,9 @@ export default function NearbyPlaces({
               <span className="place-category-mark" aria-hidden="true">{place.category === "Kafé" ? "C" : "M"}</span>
               <div className="place-copy">
                 <div className="place-name-line"><h3>{place.name}</h3><span>{formatDistance(place.distance_meters, language)}</span></div>
-                <p className="place-meta">{place.category}{place.address ? ` · ${place.address}` : ""}</p>
+                <p className="place-meta">{localizeCategory(place.category, language)}{place.address ? ` · ${place.address}` : ""}</p>
                 <p className="place-reason">{place.reason}</p>
-                <p className="place-hours">{place.opening_hours ? `${text.hours}: ${place.opening_hours}` : text.noHours}</p>
+                <p className="place-hours">{place.opening_hours ? `${text.hours}: ${place.opening_hours}` : text.noHours} · {place.fee === true ? text.feeYes : place.fee === false ? text.feeNo : text.feeUnknown}</p>
               </div>
               <div className="place-actions">
                 <a href={place.directions_url} target="_blank" rel="noreferrer">{text.directions} ↗</a>

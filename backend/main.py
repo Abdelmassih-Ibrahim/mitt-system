@@ -14,7 +14,7 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from backend.places import PlaceCategory, PlaceSearchResult, find_nearby_places, search_cities
+from backend.places import PlaceBudget, PlaceCategory, PlaceInterest, PlaceSearchResult, find_nearby_places, search_cities
 from backend.preferences import AppPreferences, DEFAULT_PREFERENCES
 from backend.localization import translate_payload
 
@@ -640,6 +640,8 @@ async def get_nearby_places(
     wind_speed: Annotated[float, Query(ge=0, le=300)] = 0,
     feels_like: Annotated[float, Query(ge=-100, le=100)] = 10,
     language: Literal["sv", "en"] = "sv",
+    budget: PlaceBudget = "free",
+    interests: Annotated[list[PlaceInterest], Query()] = [],
 ) -> PlaceSearchResult:
     try:
         return await find_nearby_places(
@@ -652,6 +654,8 @@ async def get_nearby_places(
             wind_speed,
             feels_like,
             language,
+            interests,
+            budget,
         )
     except httpx.HTTPError as error:
         raise HTTPException(
