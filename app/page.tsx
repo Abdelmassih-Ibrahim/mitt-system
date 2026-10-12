@@ -1,69 +1,133 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="survival-app">
+      <header className="topbar">
+        <a className="brand" href="#top" aria-label="Vädervett, startsida">
+          <span className="brand-mark">V</span>
+          <span>VÄDERVETT</span>
+        </a>
+        <div className="topbar-note">
+          <span className="live-dot" />
+          <span>DIN PLAN FÖR EN BLÖT DAG</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="location-label">
+          <span aria-hidden="true">⌖</span> Stockholm
         </div>
-      </main>
-    </div>
+      </header>
+
+      <div className="page-content" id="top">
+        <section className="weather-hero" aria-labelledby="hero-title">
+          <div className="weather-hero__copy">
+            <p className="eyebrow eyebrow--light">EXEMPELVÄDER · STOCKHOLM</p>
+            <h1 id="hero-title">
+              En dag för <span>tak över huvudet.</span>
+            </h1>
+            <p className="hero-summary">
+              Sidoregn, isande vind och en sol som checkar ut tidigt. Vi har en
+              plan.
+            </p>
+            <div className="weather-details">
+              <div className="temperature">
+                <span className="temperature-value">4°</span>
+                <span className="temperature-caption">KÄNNS SOM 0°</span>
+              </div>
+              <div className="weather-divider" />
+              <div className="weather-condition">
+                <span className="weather-symbol" aria-hidden="true">
+                  🌧️
+                </span>
+                <span>
+                  <strong>Regn på tvären</strong>
+                  <small>Vindbyar upp till 12 m/s</small>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="weather-hero__aside">
+            <div className="weather-stamp" aria-hidden="true">
+              <span>4°</span>
+              <span>BLÖTT</span>
+            </div>
+            <div className="daylight-note">
+              <span className="sunset-icon" aria-hidden="true">◒</span>
+              <span>
+                <small>MÖRKRET KOMMER</small>
+                <strong>15:30</strong>
+              </span>
+            </div>
+          </div>
+          <span className="hero-coordinate" aria-hidden="true">59°19′N 18°04′E</span>
+        </section>
+
+        <section className="plan-section" aria-labelledby="plan-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">MÅNDAGENS ÖVERLEVNADSPLAN</p>
+              <h2 id="plan-title">Gör dagen lite lättare.</h2>
+            </div>
+            <p className="section-aside">Tre små beslut. Mycket torrare dag.</p>
+          </div>
+
+          <div className="plan-grid">
+            <article className="plan-card outfit-card">
+              <div className="card-topline">
+                <span className="card-number">01</span>
+                <span className="card-label">KLÄDER</span>
+              </div>
+              <div className="card-icon outfit-icon" aria-hidden="true">↗</div>
+              <h3>Lämna paraplyet hemma.</h3>
+              <p>
+                Vinden vinner den matchen. Ta skaljacka med huva, varm tröja
+                och skor som tål pölar.
+              </p>
+              <div className="card-tip">
+                <span className="tip-dot" />
+                <span>Reflex på efter 15:30</span>
+              </div>
+            </article>
+
+            <article className="plan-card activity-card">
+              <div className="card-topline">
+                <span className="card-number">02</span>
+                <span className="card-label">GÖR NÅGOT</span>
+              </div>
+              <div className="card-icon activity-icon" aria-hidden="true">⌂</div>
+              <h3>Byt promenaden mot en utställning.</h3>
+              <p>
+                Hitta ett museum eller galleri nära dig. Kultur känns ännu
+                bättre när jackan får torka i garderoben.
+              </p>
+              <div className="card-tip">
+                <span className="tip-dot" />
+                <span>Inomhus · lagom äventyr</span>
+              </div>
+            </article>
+
+            <article className="plan-card cafe-card">
+              <div className="card-topline">
+                <span className="card-number">03</span>
+                <span className="card-label">TA EN PAUS</span>
+              </div>
+              <div className="card-icon cafe-icon" aria-hidden="true">☕</div>
+              <h3>Gör fikat till huvudnumret.</h3>
+              <p>
+                Sök skydd på ett kvarterskafé. Beställ något varmt, sitt kvar
+                en stund och låt skuren passera.
+              </p>
+              <div className="card-tip">
+                <span className="tip-dot" />
+                <span>Nära dig · gärna kanelbulle</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <footer className="page-footer">
+          <span>VÄDERVETT <span className="footer-mark">/</span> VÄDER MED OMTANKE</span>
+          <span>EXEMPELDATA FÖR PROTOTYPEN</span>
+        </footer>
+      </div>
+    </main>
   );
 }
+
