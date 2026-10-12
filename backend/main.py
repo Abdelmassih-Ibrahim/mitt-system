@@ -67,6 +67,7 @@ class WeatherMood(BaseModel):
 
 
 class ForecastHour(BaseModel):
+    date: str
     time: str
     temperature: float
     feels_like: float | None
@@ -79,6 +80,7 @@ class ForecastHour(BaseModel):
 
 class OutdoorWindow(BaseModel):
     available: bool
+    date: str | None
     start: str | None
     end: str | None
     explanation: str
@@ -426,12 +428,13 @@ def build_headline(current: CurrentConditions, mood: WeatherMood, sunset: str | 
 
 
 def build_outdoor_window(
-    hourly: list[ForecastHour], sunrise: str | None, sunset: str | None
+    hourly: list[ForecastHour], forecast_date: str, sunrise: str | None, sunset: str | None
 ) -> OutdoorWindow:
     suitable = [
         hour
         for hour in hourly
-        if hour.is_day
+        if hour.date == forecast_date
+        and hour.is_day
         and (hour.precipitation_probability is None or hour.precipitation_probability <= 30)
         and (hour.wind_speed is None or hour.wind_speed < 35)
         and hour.weather.mood not in ("storm", "snow")
@@ -439,6 +442,7 @@ def build_outdoor_window(
     if not suitable:
         return OutdoorWindow(
             available=False,
+            date=forecast_date,
             start=None,
             end=None,
             explanation="Ingen lugn och torr dagsljuslucka i den hämtade prognosen. Välj ett inomhusalternativ.",
@@ -468,6 +472,7 @@ def build_outdoor_window(
     if longest_length < 2:
         return OutdoorWindow(
             available=True,
+            date=forecast_date,
             start=longest_start.time,
             end=longest_end.time,
             explanation=f"En kortare lucka med dagsljus och högst 30 % nederbördsrisk. Soluppgång {sunrise or 'saknas'}, solnedgång {sunset or 'saknas'}.",
@@ -476,6 +481,7 @@ def build_outdoor_window(
     end_time = f"{(int(longest_end.time[:2]) + 1) % 24:02d}:00"
     return OutdoorWindow(
         available=True,
+        date=forecast_date,
         start=longest_start.time,
         end=end_time,
         explanation=f"Längsta sammanhängande dagsljusfönstret med högst 30 % nederbördsrisk och vind under 35 km/h. Soluppgång {sunrise or 'saknas'}, solnedgång {sunset or 'saknas'}.",
@@ -518,6 +524,7 @@ def build_payload(
         try:
             hourly_values.append(
                 ForecastHour(
+                    date=timestamp[:10],
                     time=timestamp[11:16],
                     temperature=raw_hourly["temperature_2m"][index],
                     feels_like=raw_hourly.get("apparent_temperature", [None] * len(times))[index],
@@ -559,7 +566,7 @@ def build_payload(
         quests=quests,
         dj=build_dj(current),
         hourly=hourly_values,
-        outdoor_window=build_outdoor_window(hourly_values, sunrise, sunset),
+        outdoor_window=build_outdoor_window(hourly_values, local_date, sunrise, sunset),
     )
 
 
