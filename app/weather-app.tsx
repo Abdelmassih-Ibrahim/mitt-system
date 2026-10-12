@@ -290,7 +290,8 @@ export default function WeatherApp() {
           timezone: weather?.timezone ?? "Europe/Stockholm",
         };
         setCoordinates(location);
-        void savePreferences({ ...preferences, location_name: location.name, latitude: location.latitude, longitude: location.longitude, timezone: location.timezone });
+        void savePreferences({ ...preferences, location_name: location.name, latitude: location.latitude, longitude: location.longitude, timezone: location.timezone })
+          .catch(() => setStatusMessage(t.saveFailed));
         setIsLocating(false);
       },
       () => {
