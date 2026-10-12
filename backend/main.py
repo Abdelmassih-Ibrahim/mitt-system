@@ -32,6 +32,17 @@ CURRENT_FIELDS = ",".join(
         "is_day",
     )
 )
+HOURLY_FIELDS = ",".join(
+    (
+        "temperature_2m",
+        "apparent_temperature",
+        "precipitation_probability",
+        "weather_code",
+        "wind_speed_10m",
+        "wind_direction_10m",
+        "is_day",
+    )
+)
 
 
 class CurrentConditions(BaseModel):
@@ -49,6 +60,24 @@ class WeatherMood(BaseModel):
     label: str
     icon: str
     mood: str
+
+
+class ForecastHour(BaseModel):
+    time: str
+    temperature: float
+    feels_like: float | None
+    precipitation_probability: int | None
+    wind_speed: float | None
+    wind_direction: int | None
+    weather: WeatherMood
+    is_day: bool
+
+
+class OutdoorWindow(BaseModel):
+    available: bool
+    start: str | None
+    end: str | None
+    explanation: str
 
 
 class ScoreFactor(BaseModel):
@@ -91,14 +120,22 @@ class WeatherPayload(BaseModel):
     city: str
     timezone: str
     date: str
+    sunrise: str | None
     sunset: str | None
+    temperature_min: float | None
+    temperature_max: float | None
     refreshed_at: str
+    headline: str
     current: CurrentConditions
     weather: WeatherMood
     survival: SurvivalIndex
     plan: DayPlan
     quest: Quest
+    plans: dict[str, DayPlan]
+    quests: dict[str, Quest]
     dj: WeatherDJ
+    hourly: list[ForecastHour]
+    outdoor_window: OutdoorWindow
 
 
 class CapsuleCreate(BaseModel):
