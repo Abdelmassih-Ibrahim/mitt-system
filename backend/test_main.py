@@ -200,13 +200,19 @@ class CapsuleApiTests(unittest.TestCase):
             database = Path(temp_dir) / "preferences.sqlite3"
             with patch("backend.main.DATABASE_PATH", database):
                 with TestClient(app) as client:
-                    defaults = client.get("/api/preferences")
+                    browser_one = {"X-Client-ID": "11111111-1111-4111-8111-111111111111"}
+                    browser_two = {"X-Client-ID": "22222222-2222-4222-8222-222222222222"}
+                    defaults = client.get("/api/preferences", headers=browser_one)
                     self.assertEqual(defaults.status_code, 200)
                     self.assertEqual(defaults.json()["language"], "sv")
 
                     saved = client.put(
                         "/api/preferences",
                         json={
+                            "location_name": "Uppsala",
+                            "latitude": 59.8588,
+                            "longitude": 17.6389,
+                            "timezone": "Europe/Stockholm",
                             "language": "en",
                             "temperature_unit": "fahrenheit",
                             "thermal_sensitivity": "cold",
@@ -215,13 +221,16 @@ class CapsuleApiTests(unittest.TestCase):
                             "budget": "low",
                             "interests": ["coffee", "culture"],
                         },
+                        headers=browser_one,
                     )
                     self.assertEqual(saved.status_code, 200)
-                    self.assertEqual(client.get("/api/preferences").json(), saved.json())
+                    self.assertEqual(client.get("/api/preferences", headers=browser_one).json(), saved.json())
+                    self.assertEqual(client.get("/api/preferences", headers=browser_two).json()["language"], "sv")
 
                     invalid = client.put(
                         "/api/preferences",
                         json={"language": "xx", "walking_distance_meters": 9000},
+                        headers=browser_one,
                     )
                     self.assertEqual(invalid.status_code, 422)
 
@@ -230,6 +239,8 @@ class CapsuleApiTests(unittest.TestCase):
             database = Path(temp_dir) / "capsules.sqlite3"
             with patch("backend.main.DATABASE_PATH", database):
                 with TestClient(app) as client:
+                    browser_one = {"X-Client-ID": "11111111-1111-4111-8111-111111111111"}
+                    browser_two = {"X-Client-ID": "22222222-2222-4222-8222-222222222222"}
                     saved = client.post(
                         "/api/capsules",
                         json={
@@ -239,19 +250,23 @@ class CapsuleApiTests(unittest.TestCase):
                             "quest": "Hitta stadens bästa skydd",
                             "note": "Första regndagen",
                         },
+                        headers=browser_one,
                     )
                     self.assertEqual(saved.status_code, 201)
                     capsule = saved.json()
                     self.assertEqual(capsule["city"], "Stockholm")
 
-                    listed = client.get("/api/capsules")
+                    listed = client.get("/api/capsules", headers=browser_one)
                     self.assertEqual(listed.status_code, 200)
                     self.assertEqual(len(listed.json()), 1)
                     self.assertEqual(listed.json()[0]["note"], "Första regndagen")
 
-                    deleted = client.delete(f"/api/capsules/{capsule['id']}")
+                    self.assertEqual(client.get("/api/capsules", headers=browser_two).json(), [])
+                    forbidden_delete = client.delete(f"/api/capsules/{capsule['id']}", headers=browser_two)
+                    self.assertEqual(forbidden_delete.status_code, 404)
+                    deleted = client.delete(f"/api/capsules/{capsule['id']}", headers=browser_one)
                     self.assertEqual(deleted.status_code, 204)
-                    self.assertEqual(client.get("/api/capsules").json(), [])
+                    self.assertEqual(client.get("/api/capsules", headers=browser_one).json(), [])
 
 
 if __name__ == "__main__":
