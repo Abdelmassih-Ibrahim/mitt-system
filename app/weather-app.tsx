@@ -206,19 +206,25 @@ export default function WeatherApp() {
       city: coordinates.name, mode,
       thermal_sensitivity: preferences.thermal_sensitivity,
     });
-    setIsRefreshing(true);
-    fetch(`${API_BASE}/api/weather?${params}`, { cache: "no-store", signal: controller.signal })
+    Promise.resolve().then(() => {
+      if (controller.signal.aborted) return null;
+      setIsRefreshing(true);
+      return fetch(`${API_BASE}/api/weather?${params}`, { cache: "no-store", signal: controller.signal });
+    })
+      .then((response) => response)
       .then(async (response) => {
+        if (!response) return null;
         if (!response.ok) throw new Error("weather-unavailable");
         return response.json() as Promise<WeatherPayload>;
       })
       .then((data) => {
+        if (!data) return;
         setWeather(data);
         setLastUpdated(new Date());
         setStatusMessage("");
       })
       .catch((error: unknown) => {
-        if (error instanceof Error && error.name === "AbortError") return;
+        if (controller.signal.aborted || (error instanceof Error && error.name === "AbortError")) return;
         setStatusMessage(t.unavailable);
       })
       .finally(() => { if (!controller.signal.aborted) setIsRefreshing(false); });

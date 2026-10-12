@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { Language, Mode, Preferences } from "../weather-types";
 
 const interests = ["coffee", "nature", "culture", "shopping", "photography", "fitness"] as const;
@@ -84,8 +84,6 @@ export default function PreferencesPanel({
 }) {
   const [draft, setDraft] = useState(value);
   const t = text[draft.language];
-
-  useEffect(() => setDraft(value), [value]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

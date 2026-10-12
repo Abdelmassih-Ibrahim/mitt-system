@@ -80,10 +80,18 @@ export default function NearbyPlaces({
       wind_speed: String(weather?.current.wind_speed ?? 0),
       feels_like: String(weather?.current.feels_like ?? 10),
     });
-    setIsLoading(true);
-    setError("");
-    fetch(`${API_BASE}/api/places?${params}`, { signal: controller.signal, cache: "no-store" })
+    Promise.resolve().then(() => {
+      if (controller.signal.aborted) return null;
+      setIsLoading(true);
+      setError("");
+      return fetch(`${API_BASE}/api/places?${params}`, { signal: controller.signal, cache: "no-store" });
+    })
+      .then((response) => {
+        if (!response) return null;
+        return response;
+      })
       .then(async (response) => {
+        if (!response) return { places: [] as NearbyPlace[] };
         if (!response.ok) throw new Error("places-unavailable");
         return response.json() as Promise<{ places: NearbyPlace[] }>;
       })
