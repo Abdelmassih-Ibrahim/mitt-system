@@ -68,6 +68,7 @@ function localizeCategory(category: string, language: Language) {
     "Saluhall / marknad": "Market",
     "Museum": "Museum",
     "Park": "Park",
+    "Träning": "Fitness",
     "Inomhusplats": "Indoor place",
   } as Record<string, string>)[category] ?? category;
 }

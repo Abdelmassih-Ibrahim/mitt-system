@@ -20,7 +20,7 @@ USER_AGENT = "Vadervett/0.1 (weather-aware local discovery)"
 CACHE_SECONDS = 600
 
 CATEGORY_FILTERS: dict[PlaceCategory, str] = {
-    "all": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(cafe|library|cinema|arts_centre|marketplace)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];nwr(around:{radius},{latitude},{longitude})[name][leisure=park];',
+    "all": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(cafe|library|cinema|arts_centre|marketplace|gym|sports_centre)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];nwr(around:{radius},{latitude},{longitude})[name][leisure=park];',
     "cafe": 'nwr(around:{radius},{latitude},{longitude})[name][amenity=cafe];',
     "culture": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(library|cinema|arts_centre|marketplace)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];',
 }
@@ -89,6 +89,8 @@ def classify_place(tags: dict[str, str]) -> str:
         return "Kultur"
     if amenity == "marketplace":
         return "Saluhall / marknad"
+    if amenity in {"gym", "sports_centre"}:
+        return "Träning"
     if tags.get("leisure") == "park":
         return "Park"
     if tags.get("tourism") == "museum":
@@ -103,6 +105,8 @@ def weather_reason(category: str, wet: bool, cold: bool, windy: bool) -> str:
         return "Skönt tak över huvudet när vädret är ruggigt." if wet or cold or windy else "Ett inomhusalternativ nära din promenad."
     if category == "Park":
         return "Välj en kort slinga i dagsljus och kontrollera regnrisken först." if wet or cold or windy else "Ett grönt andrum nära dig när vädret tillåter."
+    if category == "Träning":
+        return "Ett inomhuspass när vädret gör utomhusträning mindre lockande."
     return "Ett ställe värt att upptäcka i dag."
 
 
@@ -117,6 +121,7 @@ def localize_reason(reason: str, language: Literal["sv", "en"]) -> str:
         "Ett ställe värt att upptäcka i dag.": "A place worth discovering today.",
         "Välj en kort slinga i dagsljus och kontrollera regnrisken först.": "Choose a short loop in daylight and check the rain chance first.",
         "Ett grönt andrum nära dig när vädret tillåter.": "A green pause nearby when conditions allow.",
+        "Ett inomhuspass när vädret gör utomhusträning mindre lockande.": "An indoor workout when the weather makes outdoor exercise less appealing.",
     }
     return translations.get(reason, reason)
 
@@ -197,8 +202,12 @@ def parse_elements(
             rank += 4
         if "shopping" in interest_set and category_label == "Saluhall / marknad":
             rank += 4
+        if "fitness" in interest_set and category_label == "Träning":
+            rank += 4
         if "photography" in interest_set and category_label in {"Museum", "Park", "Kultur"}:
             rank += 2
+        if budget != "flexible" and has_fee is False:
+            rank += 1
         ranked_places.append((rank, place))
 
     ranked_places.sort(key=lambda item: (-item[0], item[1].distance_meters))

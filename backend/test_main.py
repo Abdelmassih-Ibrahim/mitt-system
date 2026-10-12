@@ -199,6 +199,7 @@ class WeatherLogicTests(unittest.TestCase):
                 {"type": "node", "id": 1, "lat": 59.3295, "lon": 18.0686, "tags": {"name": "Kafé", "amenity": "cafe"}},
                 {"type": "node", "id": 2, "lat": 59.3298, "lon": 18.0686, "tags": {"name": "Stadsparken", "leisure": "park", "fee": "no"}},
                 {"type": "node", "id": 3, "lat": 59.3294, "lon": 18.0686, "tags": {"name": "Avgiftsmuseum", "tourism": "museum", "fee": "yes"}},
+                {"type": "node", "id": 4, "lat": 59.3299, "lon": 18.0686, "tags": {"name": "Träningshallen", "amenity": "sports_centre", "fee": "yes"}},
             ],
             59.3293,
             18.0686,
@@ -213,6 +214,20 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual([place.name for place in places], ["Stadsparken", "Kafé"])
         self.assertEqual(places[0].fee, False)
         self.assertIsNone(places[1].fee)
+
+        fitness_places = parse_elements(
+            [{"type": "node", "id": 4, "lat": 59.3299, "lon": 18.0686, "tags": {"name": "Träningshallen", "amenity": "sports_centre", "fee": "yes"}}],
+            59.3293,
+            18.0686,
+            1000,
+            3,
+            0,
+            5,
+            12,
+            interests=["fitness"],
+            budget="flexible",
+        )
+        self.assertEqual(fitness_places[0].category, "Träning")
 
 
 class CapsuleApiTests(unittest.TestCase):
