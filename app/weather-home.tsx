@@ -36,7 +36,7 @@ const STOCKHOLM: Coordinates = {
   name: "Stockholm",
 };
 
-const REFRESH_INTERVAL = 5 * 60 * 1000;
+const REFRESH_INTERVAL = 15 * 60 * 1000;
 const STOCKHOLM_TIME_ZONE = "Europe/Stockholm";
 
 function describeWeather(code: number, isDay: number): WeatherDescription {
@@ -220,26 +220,34 @@ export default function WeatherHome() {
   const isCold = current ? current.apparent_temperature <= 5 : true;
   const isWindy = current ? current.wind_speed_10m >= 30 : false;
 
-  const outfitTitle = isWet
-    ? "Vattentätt före allt annat."
-    : isCold
-      ? "Lager på lager vinner."
-      : "Klä dig för en lång dag ute.";
-  const outfitText = isWet
-    ? "Välj jacka med huva och skor som tål väta. Byt paraply mot en ledig hand om det blåser."
-    : isCold
-      ? "En varm tröja under skaljackan gör promenaden skönare. Ta gärna mössa om vinden tar i."
-      : "Ta med ett extra lager så kan du stanna ute även när temperaturen skiftar.";
-  const activityTitle = isWet
-    ? "Gör museet till utflykten."
-    : isWindy
-      ? "Hitta lä bakom husen."
-      : "Ta omvägen genom parken.";
-  const activityText = isWet
-    ? "Välj en utställning eller ett växthus och låt skuren dra förbi innan du går vidare."
-    : isWindy
-      ? "En skogsdunge eller en gata med lä gör promenaden mycket trevligare i dag."
-      : "En kort promenad före eftermiddagskaffet kan vara dagens bästa paus.";
+  const outfitTitle = !current
+    ? "Väntar på vädret."
+    : isWet
+      ? "Vattentätt före allt annat."
+      : isCold
+        ? "Lager på lager vinner."
+        : "Klä dig för en lång dag ute.";
+  const outfitText = !current
+    ? "Så fort vädret har hämtats får du ett råd om vad som passar att ta på dig."
+    : isWet
+      ? "Välj jacka med huva och skor som tål väta. Byt paraply mot en ledig hand om det blåser."
+      : isCold
+        ? "En varm tröja under skaljackan gör promenaden skönare. Ta gärna mössa om vinden tar i."
+        : "Ta med ett extra lager så kan du stanna ute även när temperaturen skiftar.";
+  const activityTitle = !current
+    ? "Dagens idé är på väg."
+    : isWet
+      ? "Gör museet till utflykten."
+      : isWindy
+        ? "Hitta lä bakom husen."
+        : "Ta omvägen genom parken.";
+  const activityText = !current
+    ? "Aktivitetstipset anpassas efter vädret där du är."
+    : isWet
+      ? "Välj en utställning eller ett växthus och låt skuren dra förbi innan du går vidare."
+      : isWindy
+        ? "En skogsdunge eller en gata med lä gör promenaden mycket trevligare i dag."
+        : "En kort promenad före eftermiddagskaffet kan vara dagens bästa paus.";
 
   return (
     <main className="survival-app">
@@ -250,13 +258,13 @@ export default function WeatherHome() {
         </a>
         <div className="topbar-note" aria-live="polite">
           <span className={`live-dot${isRefreshing ? " is-refreshing" : ""}`} />
-          <span>{isRefreshing ? "HÄMTAR VÄDER" : "VÄDER UPPDATERAS AUTOMATISKT"}</span>
+          <span>{isRefreshing ? "HÄMTAR VÄDER" : "VÄDER UPPDATERAS VAR 15:E MINUT"}</span>
         </div>
         <div className="header-actions">
           <span className="location-label">
             <span aria-hidden="true">⌖</span> {coordinates.name}
           </span>
-          <button className="location-button" onClick={useMyLocation} disabled={isLocating}>
+          <button className="location-button" onClick={useMyLocation} disabled={isLocating} aria-label="Använd min plats" title="Använd min plats">
             <span aria-hidden="true">◎</span>
             {isLocating ? "Letar plats…" : "Använd min plats"}
           </button>
@@ -346,7 +354,7 @@ export default function WeatherHome() {
               <div className="card-icon outfit-icon" aria-hidden="true">↗</div>
               <h3>{outfitTitle}</h3>
               <p>{outfitText}</p>
-              <div className="card-tip"><span className="tip-dot" /><span>{isWet ? "Huva slår paraply i blåst" : "Ett extra lager skadar aldrig"}</span></div>
+              <div className="card-tip"><span className="tip-dot" /><span>{!current ? "Personligt råd kommer strax" : isWet ? "Huva slår paraply i blåst" : "Ett extra lager skadar aldrig"}</span></div>
             </article>
 
             <article className="plan-card activity-card">
@@ -357,7 +365,7 @@ export default function WeatherHome() {
               <div className="card-icon activity-icon" aria-hidden="true">⌂</div>
               <h3>{activityTitle}</h3>
               <p>{activityText}</p>
-              <div className="card-tip"><span className="tip-dot" /><span>{isWet ? "Inomhus · lagom äventyr" : "Ute en stund · sedan fika"}</span></div>
+              <div className="card-tip"><span className="tip-dot" /><span>{!current ? "Väntar på aktuellt väder" : isWet ? "Inomhus · lagom äventyr" : "Ute en stund · sedan fika"}</span></div>
             </article>
 
             <article className="plan-card cafe-card">
@@ -375,7 +383,7 @@ export default function WeatherHome() {
 
         <footer className="page-footer">
           <span>VÄDERVETT <span className="footer-mark">/</span> VÄDER MED OMTANKE</span>
-          <span>VÄDERDATA FRÅN <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">OPEN-METEO</a> · HÄMTAS VAR 5:E MINUT</span>
+          <span>VÄDERDATA FRÅN <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">OPEN-METEO</a> · HÄMTAS VAR 15:E MINUT</span>
         </footer>
       </div>
     </main>
