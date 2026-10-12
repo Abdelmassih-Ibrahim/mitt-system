@@ -233,6 +233,7 @@ export default function WeatherDashboard() {
       const response = await fetch(`${API_BASE}/api/capsules/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Kunde inte ta bort kapseln.");
       setCapsules((existing) => existing.filter((capsule) => capsule.id !== id));
+      setStatusMessage("Väderkapseln togs bort ur din samling.");
     } catch {
       setStatusMessage("Kapseln kunde inte tas bort just nu.");
     }
@@ -245,6 +246,9 @@ export default function WeatherDashboard() {
       activeAudio.source.stop(activeAudio.context.currentTime + 0.5);
       audioRef.current = null;
       setIsSoundPlaying(false);
+      window.setTimeout(() => {
+        if (activeAudio.context.state !== "closed") void activeAudio.context.close();
+      }, 700);
       return;
     }
 
