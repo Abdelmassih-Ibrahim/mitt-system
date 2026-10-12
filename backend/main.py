@@ -592,6 +592,13 @@ def connect_database() -> sqlite3.Connection:
     return connection
 
 
+def normalize_client_id(client_id: str) -> str:
+    try:
+        return str(UUID(client_id))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="A valid anonymous browser ID is required.") from error
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -675,43 +682,57 @@ async def get_nearby_places(
 
 
 @app.get("/api/preferences", response_model=AppPreferences)
-def get_preferences() -> AppPreferences:
+def get_preferences(client_id: Annotated[str, Header(alias="X-Client-ID")]) -> AppPreferences:
+    client_id = normalize_client_id(client_id)
     with closing(connect_database()) as connection:
-        row = connection.execute("SELECT data FROM app_preferences WHERE id = 1").fetchone()
+        row = connection.execute(
+            "SELECT data FROM user_preferences WHERE client_id = ?", (client_id,)
+        ).fetchone()
     if row is None:
         return DEFAULT_PREFERENCES
     return AppPreferences.model_validate_json(row["data"])
 
 
 @app.put("/api/preferences", response_model=AppPreferences)
-def save_preferences(preferences: AppPreferences) -> AppPreferences:
+def save_preferences(
+    preferences: AppPreferences,
+    client_id: Annotated[str, Header(alias="X-Client-ID")],
+) -> AppPreferences:
+    client_id = normalize_client_id(client_id)
     with closing(connect_database()) as connection, connection:
         connection.execute(
-            "INSERT INTO app_preferences (id, data) VALUES (1, ?) "
-            "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
-            (json.dumps(preferences.model_dump(), ensure_ascii=False),),
+            "INSERT INTO user_preferences (client_id, data) VALUES (?, ?) "
+            "ON CONFLICT(client_id) DO UPDATE SET data = excluded.data",
+            (client_id, json.dumps(preferences.model_dump(), ensure_ascii=False)),
         )
     return preferences
 
 
 @app.get("/api/capsules", response_model=list[Capsule])
-def list_capsules() -> list[Capsule]:
+def list_capsules(client_id: Annotated[str, Header(alias="X-Client-ID")]) -> list[Capsule]:
+    client_id = normalize_client_id(client_id)
     with closing(connect_database()) as connection:
         rows = connection.execute(
             "SELECT id, city, temperature, condition, quest, note, saved_at "
-            "FROM capsules ORDER BY id DESC LIMIT 30"
+            "FROM capsules WHERE client_id = ? ORDER BY id DESC LIMIT 30",
+            (client_id,),
         ).fetchall()
     return [Capsule.model_validate(dict(row)) for row in rows]
 
 
 @app.post("/api/capsules", response_model=Capsule, status_code=201)
-def save_capsule(capsule: CapsuleCreate) -> Capsule:
+def save_capsule(
+    capsule: CapsuleCreate,
+    client_id: Annotated[str, Header(alias="X-Client-ID")],
+) -> Capsule:
+    client_id = normalize_client_id(client_id)
     saved_at = datetime.now(ZoneInfo("Europe/Stockholm")).isoformat(timespec="seconds")
     with closing(connect_database()) as connection, connection:
         cursor = connection.execute(
-            "INSERT INTO capsules (city, temperature, condition, quest, note, saved_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO capsules (client_id, city, temperature, condition, quest, note, saved_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
+                client_id,
                 capsule.city,
                 capsule.temperature,
                 capsule.condition,
@@ -725,9 +746,15 @@ def save_capsule(capsule: CapsuleCreate) -> Capsule:
 
 
 @app.delete("/api/capsules/{capsule_id}", status_code=204)
-def delete_capsule(capsule_id: int) -> Response:
+def delete_capsule(
+    capsule_id: int,
+    client_id: Annotated[str, Header(alias="X-Client-ID")],
+) -> Response:
+    client_id = normalize_client_id(client_id)
     with closing(connect_database()) as connection, connection:
-        cursor = connection.execute("DELETE FROM capsules WHERE id = ?", (capsule_id,))
+        cursor = connection.execute(
+            "DELETE FROM capsules WHERE id = ? AND client_id = ?", (capsule_id, client_id)
+        )
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Väderkapseln finns inte.")
     return Response(status_code=204)
