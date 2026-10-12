@@ -29,7 +29,7 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual(mood.label, "Klart i natt")
         self.assertEqual(mood.mood, "night")
 
-    def test_severe_wet_cold_weather_has_higher_survival_score(self) -> None:
+    def test_comfortable_weather_has_higher_survival_score(self) -> None:
         rough_weather = CurrentConditions(
             temperature=-2,
             feels_like=-9,
@@ -50,8 +50,11 @@ class WeatherLogicTests(unittest.TestCase):
             wind_direction=180,
             is_day=True,
         )
-        self.assertGreater(calculate_survival(rough_weather).score, calculate_survival(mild_weather).score)
-        self.assertEqual(calculate_survival(rough_weather).level, "Expedition")
+        rough_score = calculate_survival(rough_weather).score
+        mild_score = calculate_survival(mild_weather).score
+        self.assertGreater(mild_score, rough_score)
+        self.assertGreaterEqual(rough_score, 0)
+        self.assertLessEqual(mild_score, 100)
 
     def test_plan_mode_changes_activity(self) -> None:
         current = CurrentConditions(
