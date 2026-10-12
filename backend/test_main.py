@@ -12,6 +12,7 @@ from backend.main import (
     build_dj,
     build_plan,
     build_quest,
+    build_payload,
     calculate_survival,
     describe_weather,
     CurrentConditions,
@@ -55,6 +56,42 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertGreater(mild_score, rough_score)
         self.assertGreaterEqual(rough_score, 0)
         self.assertLessEqual(mild_score, 100)
+
+    def test_payload_includes_only_upcoming_local_hours(self) -> None:
+        data = {
+            "timezone": "Europe/Stockholm",
+            "current": {
+                "time": "2026-10-12T14:30",
+                "temperature_2m": 9,
+                "apparent_temperature": 6,
+                "relative_humidity_2m": 80,
+                "precipitation": 0.1,
+                "weather_code": 51,
+                "wind_speed_10m": 18,
+                "wind_direction_10m": 210,
+                "is_day": 1,
+            },
+            "hourly": {
+                "time": ["2026-10-12T14:00", "2026-10-12T15:00", "2026-10-12T16:00"],
+                "temperature_2m": [9, 8, 7],
+                "apparent_temperature": [6, 5, 4],
+                "precipitation_probability": [80, 45, 10],
+                "weather_code": [51, 3, 1],
+                "wind_speed_10m": [18, 14, 8],
+                "is_day": [1, 1, 1],
+            },
+            "daily": {
+                "time": ["2026-10-12"],
+                "sunrise": ["2026-10-12T07:30"],
+                "sunset": ["2026-10-12T17:49"],
+            },
+        }
+
+        payload = build_payload(data, "Stockholm", "outdoor")
+
+        self.assertEqual([hour.time for hour in payload.hourly], ["15:00", "16:00"])
+        self.assertEqual(payload.hourly[0].precipitation_probability, 45)
+        self.assertEqual(payload.sunrise, "07:30")
 
     def test_plan_mode_changes_activity(self) -> None:
         current = CurrentConditions(
