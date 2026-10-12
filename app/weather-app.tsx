@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import HourlyForecast from "./components/hourly-forecast";
 import NearbyPlaces from "./components/nearby-places";
 import PreferencesPanel from "./components/preferences-panel";
@@ -197,7 +197,7 @@ export default function WeatherApp() {
       id = window.crypto.randomUUID();
       window.localStorage.setItem(storageKey, id);
     }
-    setClientId(id);
+    startTransition(() => setClientId(id));
   }, []);
 
   useEffect(() => {
