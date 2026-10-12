@@ -74,13 +74,19 @@ class WeatherLogicTests(unittest.TestCase):
                 "is_day": 1,
             },
             "hourly": {
-                "time": ["2026-10-12T14:00", "2026-10-12T15:00", "2026-10-12T16:00"],
-                "temperature_2m": [9, 8, 7],
-                "apparent_temperature": [6, 5, 4],
-                "precipitation_probability": [80, 45, 10],
-                "weather_code": [51, 3, 1],
-                "wind_speed_10m": [18, 14, 8],
-                "is_day": [1, 1, 1],
+                "time": [
+                    "2026-10-12T14:00",
+                    "2026-10-12T15:00",
+                    "2026-10-12T16:00",
+                    "2026-10-13T09:00",
+                    "2026-10-13T10:00",
+                ],
+                "temperature_2m": [9, 8, 7, 12, 13],
+                "apparent_temperature": [6, 5, 4, 11, 12],
+                "precipitation_probability": [80, 45, 10, 0, 0],
+                "weather_code": [51, 3, 1, 0, 0],
+                "wind_speed_10m": [18, 14, 8, 8, 7],
+                "is_day": [1, 1, 1, 1, 1],
             },
             "daily": {
                 "time": ["2026-10-12"],
@@ -94,6 +100,7 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual([hour.time for hour in payload.hourly], ["15:00", "16:00"])
         self.assertEqual(payload.hourly[0].precipitation_probability, 45)
         self.assertEqual(payload.sunrise, "07:30")
+        self.assertFalse(payload.outdoor_window.available)
 
     def test_plan_mode_changes_activity(self) -> None:
         current = CurrentConditions(

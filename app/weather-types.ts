@@ -13,6 +13,7 @@ export type Coordinates = {
 
 export type WeatherMood = { label: string; icon: string; mood: string };
 export type ForecastHour = {
+  date: string;
   time: string;
   temperature: number;
   feels_like: number | null;
@@ -24,6 +25,7 @@ export type ForecastHour = {
 };
 export type OutdoorWindow = {
   available: boolean;
+  date: string | null;
   start: string | null;
   end: string | null;
   explanation: string;

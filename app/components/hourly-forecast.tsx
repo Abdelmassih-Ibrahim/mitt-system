@@ -11,6 +11,7 @@ const copy = {
     rain: "Regnrisk",
     wind: "Vind",
     source: "Prognos från Open-Meteo. Vädermodeller uppdateras med olika intervall.",
+    tomorrow: "I MORGON",
   },
   en: {
     eyebrow: "WHEN TO HEAD OUT",
@@ -22,6 +23,7 @@ const copy = {
     rain: "Rain chance",
     wind: "Wind",
     source: "Forecast by Open-Meteo. Weather models update at different intervals.",
+    tomorrow: "TOMORROW",
   },
 };
 
@@ -69,7 +71,8 @@ export default function HourlyForecast({
       {hours.length ? (
         <div className="hourly-track" aria-label={text.title}>
           {hours.map((hour) => (
-            <article className="hourly-item" key={`${hour.time}-${hour.weather.mood}`}>
+            <article className="hourly-item" key={`${hour.date}-${hour.time}-${hour.weather.mood}`}>
+              {hour.date !== hours[0]?.date ? <span className="hourly-day">{text.tomorrow}</span> : null}
               <time>{hour.time}</time>
               <span className="hourly-icon" aria-hidden="true">{hour.weather.icon}</span>
               <strong>{temperatureValue(hour.temperature, unit)}</strong>

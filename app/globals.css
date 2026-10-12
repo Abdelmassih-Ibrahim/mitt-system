@@ -206,6 +206,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .hourly-item { min-width: 109px; padding: 12px 11px 14px; display: grid; align-content: start; justify-items: center; gap: 7px; border-right: 1px solid #e4e6e1; text-align: center; }
 .hourly-item:first-child { border-left: 1px solid #e4e6e1; }
 .hourly-item time { color: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.hourly-day { color: var(--coral); font-size: 7px; font-weight: 750; letter-spacing: .08em; }
 .hourly-icon { min-height: 28px; color: var(--blue); font-size: 21px; filter: saturate(.7); }
 .hourly-item > strong { color: var(--ink); font-family: var(--font-display); font-size: 22px; font-weight: 400; }
 .hourly-feels, .hourly-rain, .hourly-wind { color: var(--muted); font-size: 8px; line-height: 1.3; }
