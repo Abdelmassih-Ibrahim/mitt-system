@@ -140,13 +140,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-stats small { color: #d8e3e2; font-size: 8px; font-weight: 750; letter-spacing: .11em; }
 .weather-stats strong { color: #fffdf7; font-size: 11px; font-weight: 600; }
 .weather-hero-side { display: grid; justify-items: end; gap: 13px; }
-.clock-panel { width: min(100%, 294px); padding: 21px 23px; border: 1px solid rgb(255 255 255 / 42%); background: rgb(247 246 241 / 94%); color: var(--ink); }
-.clock-live { display: flex; align-items: center; gap: 7px; color: var(--blue); font-size: 8px; font-weight: 750; letter-spacing: .12em; }
-.clock-live i { width: 6px; height: 6px; border-radius: 50%; background: #a17648; }
-.clock-time { margin-top: 18px; display: flex; align-items: baseline; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.clock-time > span { font-family: var(--font-display); font-size: clamp(51px, 6vw, 70px); line-height: .9; }
-.clock-time small { color: var(--coral); font-size: 13px; }
-.clock-panel > p { margin: 9px 0 0; color: var(--muted); font-size: 10px; text-transform: capitalize; }
+.daylight-panel { width: min(100%, 294px); padding: 21px 23px; border: 1px solid rgb(255 255 255 / 42%); background: rgb(247 246 241 / 94%); color: var(--ink); }
+.daylight-panel .eyebrow { margin-bottom: 19px; color: var(--blue); }
+.daylight-times { display: grid; grid-template-columns: 1fr 32px 1fr; align-items: center; gap: 10px; }
+.daylight-times > span { display: grid; gap: 5px; }
+.daylight-times small { color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .06em; }
+.daylight-times strong { color: var(--ink); font-family: var(--font-display); font-size: 29px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.daylight-times > i { height: 1px; background: linear-gradient(90deg, #9aaeb0, #d6bb74); }
+.daylight-panel > p:last-child { margin: 16px 0 0; color: var(--blue); font-size: 9px; }
 .weather-source { display: flex; align-items: center; gap: 8px; color: #eef1ec; font-size: 9px; text-align: right; }
 .refresh-button { min-height: 29px; padding: 0 8px; border-color: rgb(255 255 255 / 40%); color: #fffdf7; font-size: 9px; }
 .refresh-button:hover { background: rgb(255 255 255 / 13%); }
@@ -298,11 +299,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weather-description { margin-top: 14px; font-size: 25px; }
   .weather-stats { margin-top: 17px; gap: 14px 20px; }
   .weather-hero-side { grid-template-columns: 1fr auto; align-items: center; justify-items: stretch; gap: 9px; }
-  .clock-panel { width: auto; padding: 12px 14px; }
-  .clock-time { margin-top: 9px; }
-  .clock-time > span { font-size: 43px; }
-  .clock-time small { font-size: 10px; }
-  .clock-panel > p { margin-top: 5px; font-size: 8px; }
+  .daylight-panel { width: auto; padding: 12px 14px; }
+  .daylight-panel .eyebrow { margin-bottom: 11px; }
+  .daylight-times { grid-template-columns: 1fr 18px 1fr; gap: 6px; }
+  .daylight-times strong { font-size: 24px; }
+  .daylight-panel > p:last-child { margin-top: 9px; font-size: 8px; }
   .weather-source { align-items: flex-end; flex-direction: column; font-size: 8px; }
   .weather-source > span { max-width: 115px; line-height: 1.4; }
   .refresh-button { font-size: 8px; }
@@ -345,7 +346,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weather-stats { gap: 12px; }
   .weather-stats > div { min-width: 64px; }
   .weather-hero-side { grid-template-columns: minmax(0,1fr) 95px; }
-  .clock-time > span { font-size: 38px; }
+  .daylight-times strong { font-size: 21px; }
   .weather-source { max-width: 95px; }
   .weather-source > span { max-width: 95px; text-align: right; }
   .mode-switch button { font-size: 8px; }
