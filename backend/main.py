@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from backend.places import PlaceCategory, PlaceSearchResult, find_nearby_places, search_cities
 from backend.preferences import AppPreferences, DEFAULT_PREFERENCES
+from backend.localization import translate_payload
 
 WeatherMode = Literal["outdoor", "indoor", "surprise"]
 
@@ -580,6 +581,7 @@ async def get_weather(
     city: Annotated[str, Query(min_length=1, max_length=120)] = "Stockholm",
     mode: WeatherMode = "outdoor",
     thermal_sensitivity: Literal["cold", "neutral", "warm"] = "neutral",
+    language: Literal["sv", "en"] = "sv",
 ) -> WeatherPayload:
     params = {
         "latitude": latitude,
@@ -595,7 +597,10 @@ async def get_weather(
             response = await client.get(WEATHER_URL, params=params)
             response.raise_for_status()
             data = response.json()
-        return build_payload(data, city, mode, thermal_sensitivity)
+        payload = build_payload(data, city, mode, thermal_sensitivity)
+        if language == "en":
+            return WeatherPayload.model_validate(translate_payload(payload.model_dump()))
+        return payload
     except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
         raise HTTPException(status_code=502, detail="Väderdata kunde inte hämtas just nu.") from error
 
@@ -603,9 +608,10 @@ async def get_weather(
 @app.get("/api/locations/search")
 async def get_location_suggestions(
     query: Annotated[str, Query(min_length=2, max_length=80)],
+    language: Literal["sv", "en"] = "sv",
 ) -> list[dict]:
     try:
-        return [city.model_dump() for city in await search_cities(query)]
+        return [city.model_dump() for city in await search_cities(query, language)]
     except httpx.HTTPError as error:
         raise HTTPException(status_code=502, detail="Ortsökningen är tillfälligt otillgänglig.") from error
 
@@ -620,6 +626,7 @@ async def get_nearby_places(
     precipitation_probability: Annotated[int, Query(ge=0, le=100)] = 0,
     wind_speed: Annotated[float, Query(ge=0, le=300)] = 0,
     feels_like: Annotated[float, Query(ge=-100, le=100)] = 10,
+    language: Literal["sv", "en"] = "sv",
 ) -> PlaceSearchResult:
     try:
         return await find_nearby_places(
@@ -631,6 +638,7 @@ async def get_nearby_places(
             precipitation_probability,
             wind_speed,
             feels_like,
+            language,
         )
     except httpx.HTTPError as error:
         raise HTTPException(

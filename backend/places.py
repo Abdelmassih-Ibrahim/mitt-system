@@ -53,7 +53,7 @@ class CityResult(BaseModel):
     timezone: str
 
 
-_place_cache: dict[tuple[float, float, int, str], tuple[float, PlaceSearchResult]] = {}
+_place_cache: dict[tuple[object, ...], tuple[float, PlaceSearchResult]] = {}
 
 
 def haversine_meters(latitude_a: float, longitude_a: float, latitude_b: float, longitude_b: float) -> float:
@@ -94,6 +94,19 @@ def weather_reason(category: str, wet: bool, cold: bool, windy: bool) -> str:
     return "Ett ställe värt att upptäcka i dag."
 
 
+def localize_reason(reason: str, language: Literal["sv", "en"]) -> str:
+    if language == "sv":
+        return reason
+    translations = {
+        "En varm paus under tak nära till hands.": "A warm break under cover, close by.",
+        "En fin omväg för dagens kaffepaus.": "A pleasant detour for today's coffee break.",
+        "Skönt tak över huvudet när vädret är ruggigt.": "A comfortable roof over your head in rough weather.",
+        "Ett inomhusalternativ nära din promenad.": "An indoor option near your walk.",
+        "Ett ställe värt att upptäcka i dag.": "A place worth discovering today.",
+    }
+    return translations.get(reason, reason)
+
+
 def parse_elements(
     elements: list[dict],
     latitude: float,
@@ -103,6 +116,7 @@ def parse_elements(
     precipitation_probability: int,
     wind_speed: float,
     feels_like: float,
+    language: Literal["sv", "en"] = "sv",
 ) -> list[NearbyPlace]:
     places: list[NearbyPlace] = []
     wet = precipitation_probability >= 40 or 51 <= weather_code <= 82 or weather_code >= 95
@@ -149,7 +163,7 @@ def parse_elements(
                     "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route="
                     f"{latitude}%2C{longitude}%3B{place_latitude}%2C{place_longitude}"
                 ),
-                reason=weather_reason(classify_place(tags), wet, cold, windy),
+                reason=localize_reason(weather_reason(classify_place(tags), wet, cold, windy), language),
             )
         )
 
@@ -165,8 +179,12 @@ async def find_nearby_places(
     precipitation_probability: int,
     wind_speed: float,
     feels_like: float,
+    language: Literal["sv", "en"] = "sv",
 ) -> PlaceSearchResult:
-    cache_key = (round(latitude, 4), round(longitude, 4), radius_meters, category)
+    cache_key = (
+        round(latitude, 4), round(longitude, 4), radius_meters, category,
+        weather_code, precipitation_probability, round(wind_speed), round(feels_like), language,
+    )
     cached = _place_cache.get(cache_key)
     if cached and time.monotonic() - cached[0] < CACHE_SECONDS:
         return cached[1]
@@ -197,6 +215,7 @@ async def find_nearby_places(
             precipitation_probability,
             wind_speed,
             feels_like,
+            language,
         ),
         radius_meters=radius_meters,
         data_timestamp=data.get("osm3s", {}).get("timestamp_osm_base"),
@@ -205,11 +224,11 @@ async def find_nearby_places(
     return result
 
 
-async def search_cities(query: str) -> list[CityResult]:
+async def search_cities(query: str, language: Literal["sv", "en"] = "sv") -> list[CityResult]:
     async with httpx.AsyncClient(timeout=10, headers={"User-Agent": USER_AGENT}) as client:
         response = await client.get(
             GEOCODING_URL,
-            params={"name": query, "count": 8, "language": "sv", "format": "json", "countryCode": "SE"},
+            params={"name": query, "count": 8, "language": language, "format": "json", "countryCode": "SE"},
         )
         response.raise_for_status()
         data = response.json()
