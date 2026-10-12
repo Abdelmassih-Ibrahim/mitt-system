@@ -238,6 +238,16 @@ class CapsuleApiTests(unittest.TestCase):
                 with TestClient(app) as client:
                     browser_one = {"X-Client-ID": "11111111-1111-4111-8111-111111111111"}
                     browser_two = {"X-Client-ID": "22222222-2222-4222-8222-222222222222"}
+                    preflight = client.options(
+                        "/api/preferences",
+                        headers={
+                            "Origin": "http://localhost:3000",
+                            "Access-Control-Request-Method": "PUT",
+                            "Access-Control-Request-Headers": "content-type,x-client-id",
+                        },
+                    )
+                    self.assertEqual(preflight.status_code, 200)
+                    self.assertEqual(preflight.headers["access-control-allow-origin"], "http://localhost:3000")
                     defaults = client.get("/api/preferences", headers=browser_one)
                     self.assertEqual(defaults.status_code, 200)
                     self.assertEqual(defaults.json()["language"], "sv")
