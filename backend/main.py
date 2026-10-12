@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import random
 import sqlite3
+import json
 from contextlib import asynccontextmanager, closing
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,6 +14,8 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from backend.places import PlaceCategory, PlaceSearchResult, find_nearby_places, search_cities
+from backend.preferences import AppPreferences, DEFAULT_PREFERENCES
 
 WeatherMode = Literal["outdoor", "indoor", "surprise"]
 
@@ -221,6 +224,9 @@ def initialize_database() -> None:
             )
             """
         )
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS app_preferences (id INTEGER PRIMARY KEY CHECK (id = 1), data TEXT NOT NULL)"
+        )
 
 
 def describe_weather(code: int, is_day: bool) -> WeatherMood:
@@ -290,9 +296,14 @@ def calculate_survival(current: CurrentConditions) -> SurvivalIndex:
     )
 
 
-def build_plan(current: CurrentConditions, mode: WeatherMode) -> DayPlan:
+def build_plan(
+    current: CurrentConditions,
+    mode: WeatherMode,
+    thermal_sensitivity: Literal["cold", "neutral", "warm"] = "neutral",
+) -> DayPlan:
     wet = current.precipitation > 0 or 51 <= current.code <= 82 or current.code >= 95
-    cold = current.feels_like <= 5
+    cold_threshold = {"cold": 10, "neutral": 5, "warm": 1}[thermal_sensitivity]
+    cold = current.feels_like <= cold_threshold
     windy = current.wind_speed >= 30
 
     if mode == "indoor":
@@ -470,7 +481,12 @@ def build_outdoor_window(
     )
 
 
-def build_payload(data: dict, city: str, mode: WeatherMode) -> WeatherPayload:
+def build_payload(
+    data: dict,
+    city: str,
+    mode: WeatherMode,
+    thermal_sensitivity: Literal["cold", "neutral", "warm"] = "neutral",
+) -> WeatherPayload:
     raw = data["current"]
     current = CurrentConditions(
         temperature=raw["temperature_2m"],
@@ -517,7 +533,10 @@ def build_payload(data: dict, city: str, mode: WeatherMode) -> WeatherPayload:
     daily = data.get("daily", {})
     max_temps = daily.get("temperature_2m_max", [])
     min_temps = daily.get("temperature_2m_min", [])
-    plans = {key: build_plan(current, key) for key in ("outdoor", "indoor", "surprise")}
+    plans = {
+        key: build_plan(current, key, thermal_sensitivity)
+        for key in ("outdoor", "indoor", "surprise")
+    }
     quests = {key: build_quest(current, key, local_date) for key in ("outdoor", "indoor", "surprise")}
 
     return WeatherPayload(
@@ -560,6 +579,7 @@ async def get_weather(
     longitude: Annotated[float, Query(ge=-180, le=180)] = 18.0686,
     city: Annotated[str, Query(min_length=1, max_length=120)] = "Stockholm",
     mode: WeatherMode = "outdoor",
+    thermal_sensitivity: Literal["cold", "neutral", "warm"] = "neutral",
 ) -> WeatherPayload:
     params = {
         "latitude": latitude,
@@ -575,9 +595,68 @@ async def get_weather(
             response = await client.get(WEATHER_URL, params=params)
             response.raise_for_status()
             data = response.json()
-        return build_payload(data, city, mode)
+        return build_payload(data, city, mode, thermal_sensitivity)
     except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
         raise HTTPException(status_code=502, detail="Väderdata kunde inte hämtas just nu.") from error
+
+
+@app.get("/api/locations/search")
+async def get_location_suggestions(
+    query: Annotated[str, Query(min_length=2, max_length=80)],
+) -> list[dict]:
+    try:
+        return [city.model_dump() for city in await search_cities(query)]
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail="Ortsökningen är tillfälligt otillgänglig.") from error
+
+
+@app.get("/api/places", response_model=PlaceSearchResult)
+async def get_nearby_places(
+    latitude: Annotated[float, Query(ge=-90, le=90)],
+    longitude: Annotated[float, Query(ge=-180, le=180)],
+    radius_meters: Annotated[int, Query(ge=250, le=5000)] = 1500,
+    category: PlaceCategory = "all",
+    weather_code: Annotated[int, Query(ge=0, le=99)] = 3,
+    precipitation_probability: Annotated[int, Query(ge=0, le=100)] = 0,
+    wind_speed: Annotated[float, Query(ge=0, le=300)] = 0,
+    feels_like: Annotated[float, Query(ge=-100, le=100)] = 10,
+) -> PlaceSearchResult:
+    try:
+        return await find_nearby_places(
+            latitude,
+            longitude,
+            radius_meters,
+            category,
+            weather_code,
+            precipitation_probability,
+            wind_speed,
+            feels_like,
+        )
+    except httpx.HTTPError as error:
+        raise HTTPException(
+            status_code=502,
+            detail="Karttjänsten svarar inte just nu. Försök igen lite senare.",
+        ) from error
+
+
+@app.get("/api/preferences", response_model=AppPreferences)
+def get_preferences() -> AppPreferences:
+    with closing(connect_database()) as connection:
+        row = connection.execute("SELECT data FROM app_preferences WHERE id = 1").fetchone()
+    if row is None:
+        return DEFAULT_PREFERENCES
+    return AppPreferences.model_validate_json(row["data"])
+
+
+@app.put("/api/preferences", response_model=AppPreferences)
+def save_preferences(preferences: AppPreferences) -> AppPreferences:
+    with closing(connect_database()) as connection, connection:
+        connection.execute(
+            "INSERT INTO app_preferences (id, data) VALUES (1, ?) "
+            "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
+            (json.dumps(preferences.model_dump(), ensure_ascii=False),),
+        )
+    return preferences
 
 
 @app.get("/api/capsules", response_model=list[Capsule])
