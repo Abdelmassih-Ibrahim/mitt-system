@@ -51,10 +51,18 @@ class WeatherMood(BaseModel):
     mood: str
 
 
+class ScoreFactor(BaseModel):
+    label: str
+    deduction: int
+    explanation: str
+
+
 class SurvivalIndex(BaseModel):
     score: int
     level: str
     summary: str
+    factors: list[ScoreFactor]
+    disclaimer: str
 
 
 class DayPlan(BaseModel):
@@ -188,47 +196,61 @@ def describe_weather(code: int, is_day: bool) -> WeatherMood:
 
 
 def calculate_survival(current: CurrentConditions) -> SurvivalIndex:
-    score = 0
+    factors: list[ScoreFactor] = []
+
+    def add_factor(label: str, deduction: int, explanation: str) -> None:
+        if deduction:
+            factors.append(ScoreFactor(label=label, deduction=deduction, explanation=explanation))
+
     if current.feels_like <= -15:
-        score += 45
+        add_factor("Kyla", 45, f"Det känns som {round(current.feels_like)}°.")
     elif current.feels_like <= -5:
-        score += 34
+        add_factor("Kyla", 34, f"Det känns som {round(current.feels_like)}°.")
     elif current.feels_like <= 2:
-        score += 24
+        add_factor("Kyla", 24, f"Det känns som {round(current.feels_like)}°.")
     elif current.feels_like <= 7:
-        score += 14
+        add_factor("Kyla", 14, f"Det känns som {round(current.feels_like)}°.")
     elif current.feels_like <= 12:
-        score += 6
+        add_factor("Kyla", 6, f"Det känns som {round(current.feels_like)}°.")
 
     if current.wind_speed >= 60:
-        score += 32
+        add_factor("Vind", 32, f"Vinden ligger på {round(current.wind_speed)} km/h.")
     elif current.wind_speed >= 40:
-        score += 24
+        add_factor("Vind", 24, f"Vinden ligger på {round(current.wind_speed)} km/h.")
     elif current.wind_speed >= 25:
-        score += 14
+        add_factor("Vind", 14, f"Vinden ligger på {round(current.wind_speed)} km/h.")
     elif current.wind_speed >= 15:
-        score += 7
+        add_factor("Vind", 7, f"Vinden ligger på {round(current.wind_speed)} km/h.")
 
     if current.precipitation >= 5:
-        score += 27
+        add_factor("Nederbörd", 27, f"{current.precipitation:.1f} mm nederbörd nyligen.")
     elif current.precipitation >= 1:
-        score += 20
+        add_factor("Nederbörd", 20, f"{current.precipitation:.1f} mm nederbörd nyligen.")
     elif current.precipitation > 0:
-        score += 11
+        add_factor("Nederbörd", 11, f"{current.precipitation:.1f} mm nederbörd nyligen.")
 
     if current.code >= 95:
-        score += 25
+        add_factor("Åska", 25, "Åska gör utomhusplaner olämpliga.")
     if current.code in (45, 48):
-        score += 8
+        add_factor("Sikt", 8, "Dimma försämrar sikten.")
 
-    score = min(score, 100)
-    if score >= 70:
-        return SurvivalIndex(score=score, level="Expedition", summary="Vädret kräver en genomtänkt plan.")
-    if score >= 45:
-        return SurvivalIndex(score=score, level="Äventyr", summary="Ute går bra med rätt förberedelser.")
-    if score >= 20:
-        return SurvivalIndex(score=score, level="Jackväder", summary="Ett extra lager gör dagen enklare.")
-    return SurvivalIndex(score=score, level="Lätt bris", summary="Bra läge för en spontan sväng ut.")
+    score = max(0, 100 - sum(factor.deduction for factor in factors))
+    if score >= 85:
+        level, summary = "Väderbonus", "Härligt ute. Ta vara på ljuset."
+    elif score >= 65:
+        level, summary = "Ganska fint", "En lätt jacka räcker för många."
+    elif score >= 40:
+        level, summary = "Jacka och plan", "Kolla vinden och välj ett bra lager."
+    else:
+        level, summary = "Inomhus är rimligt", "Välj utefönstret noga eller gör det mysigt inne."
+
+    return SurvivalIndex(
+        score=score,
+        level=level,
+        summary=summary,
+        factors=factors,
+        disclaimer="Vädervetts uppskattning av utomhuskomfort, inte ett officiellt meteorologiskt mått.",
+    )
 
 
 def build_plan(current: CurrentConditions, mode: WeatherMode) -> DayPlan:
