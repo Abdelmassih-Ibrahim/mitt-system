@@ -17,6 +17,8 @@ from backend.main import (
     describe_weather,
     CurrentConditions,
 )
+from backend.places import parse_elements
+from backend.preferences import AppPreferences
 
 
 class WeatherLogicTests(unittest.TestCase):
@@ -139,8 +141,73 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual(dj.genre, "Lo-fi jazz")
         self.assertIn("regn", dj.soundscape.lower())
 
+    def test_nearby_places_use_real_osm_tags_and_drop_missing_names(self) -> None:
+        places = parse_elements(
+            [
+                {
+                    "type": "node",
+                    "id": 456,
+                    "lat": 59.3300,
+                    "lon": 18.0686,
+                    "tags": {
+                        "name": "Kvarterskaféet",
+                        "amenity": "cafe",
+                        "addr:street": "Exempelgatan",
+                        "addr:housenumber": "4",
+                        "opening_hours": "Mo-Fr 08:00-18:00",
+                    },
+                },
+                {"type": "node", "id": 789, "lat": 59.3294, "lon": 18.0686, "tags": {"amenity": "cafe"}},
+                {"type": "node", "id": 999, "lat": 59.5, "lon": 18.0686, "tags": {"name": "Too far", "amenity": "cafe"}},
+            ],
+            59.3293,
+            18.0686,
+            1000,
+            63,
+            80,
+            30,
+            4,
+        )
+        self.assertEqual(len(places), 1)
+        self.assertEqual(places[0].name, "Kvarterskaféet")
+        self.assertEqual(places[0].category, "Kafé")
+        self.assertEqual(places[0].address, "Exempelgatan 4")
+        self.assertEqual(places[0].opening_hours, "Mo-Fr 08:00-18:00")
+        self.assertIn("openstreetmap.org/directions", places[0].directions_url)
+        self.assertIn("tak", places[0].reason)
+
 
 class CapsuleApiTests(unittest.TestCase):
+    def test_preferences_are_saved_and_returned(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database = Path(temp_dir) / "preferences.sqlite3"
+            with patch("backend.main.DATABASE_PATH", database):
+                with TestClient(app) as client:
+                    defaults = client.get("/api/preferences")
+                    self.assertEqual(defaults.status_code, 200)
+                    self.assertEqual(defaults.json()["language"], "sv")
+
+                    saved = client.put(
+                        "/api/preferences",
+                        json={
+                            "language": "en",
+                            "temperature_unit": "fahrenheit",
+                            "thermal_sensitivity": "cold",
+                            "preferred_mode": "indoor",
+                            "walking_distance_meters": 900,
+                            "budget": "low",
+                            "interests": ["coffee", "culture"],
+                        },
+                    )
+                    self.assertEqual(saved.status_code, 200)
+                    self.assertEqual(client.get("/api/preferences").json(), saved.json())
+
+                    invalid = client.put(
+                        "/api/preferences",
+                        json={"language": "xx", "walking_distance_meters": 9000},
+                    )
+                    self.assertEqual(invalid.status_code, 422)
+
     def test_capsules_can_be_saved_listed_and_deleted(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database = Path(temp_dir) / "capsules.sqlite3"
