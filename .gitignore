@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/.venv
 /.pnp
 .pnp.*
 .yarn/*
@@ -12,6 +13,9 @@
 
 # testing
 /coverage
+/.pytest_cache/
+__pycache__/
+*.py[cod]
 
 # next.js
 /.next/
@@ -23,6 +27,7 @@
 # misc
 .DS_Store
 *.pem
+backend/*.sqlite3
 
 # debug
 npm-debug.log*
