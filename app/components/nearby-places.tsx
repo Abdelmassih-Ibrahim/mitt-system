@@ -138,7 +138,7 @@ export default function NearbyPlaces({
         if (!controller.signal.aborted) setIsLoading(false);
       });
     return () => controller.abort();
-  }, [coordinates, radius, category, weather, attempt, language, text.error, budget, interests]);
+  }, [coordinates, radius, category, weather, attempt, language, text.error, text.serviceMessage, budget, interests]);
 
   const categories: Array<{ id: PlaceCategory; label: string }> = [
     { id: "all", label: text.all },

@@ -135,7 +135,11 @@ const phraseTranslations: Record<string, string> = {
 };
 
 function localize(value: string, language: Language) {
-  return language === "en" ? (weatherTranslations[value] ?? phraseTranslations[value] ?? value) : value;
+  if (language !== "en") return value;
+  if (value.startsWith("En stilla dag. Dagsljuset räcker till ")) {
+    return value.replace("En stilla dag. Dagsljuset räcker till ", "A quiet day. Daylight lasts until ");
+  }
+  return weatherTranslations[value] ?? phraseTranslations[value] ?? value;
 }
 
 function temperatureValue(value: number, unit: Preferences["temperature_unit"]) {
