@@ -496,7 +496,7 @@ def build_payload(data: dict, city: str, mode: WeatherMode) -> WeatherPayload:
 
     for index, timestamp in enumerate(times):
         hour_number = int(timestamp[11:13]) if len(timestamp) >= 13 else -1
-        if timestamp[:10] == local_date and hour_number < current_hour:
+        if timestamp[:10] == local_date and hour_number <= current_hour:
             continue
         try:
             hourly_values.append(
