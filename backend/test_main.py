@@ -193,6 +193,27 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertIn("openstreetmap.org/directions", places[0].directions_url)
         self.assertIn("tak", places[0].reason)
 
+    def test_nearby_places_apply_interest_and_known_fee_preferences(self) -> None:
+        places = parse_elements(
+            [
+                {"type": "node", "id": 1, "lat": 59.3295, "lon": 18.0686, "tags": {"name": "Kafé", "amenity": "cafe"}},
+                {"type": "node", "id": 2, "lat": 59.3298, "lon": 18.0686, "tags": {"name": "Stadsparken", "leisure": "park", "fee": "no"}},
+                {"type": "node", "id": 3, "lat": 59.3294, "lon": 18.0686, "tags": {"name": "Avgiftsmuseum", "tourism": "museum", "fee": "yes"}},
+            ],
+            59.3293,
+            18.0686,
+            1000,
+            3,
+            0,
+            5,
+            12,
+            interests=["nature"],
+            budget="free",
+        )
+        self.assertEqual([place.name for place in places], ["Stadsparken", "Kafé"])
+        self.assertEqual(places[0].fee, False)
+        self.assertIsNone(places[1].fee)
+
 
 class CapsuleApiTests(unittest.TestCase):
     def test_preferences_are_saved_and_returned(self) -> None:
