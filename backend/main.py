@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import random
 import sqlite3
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, closing
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -161,7 +161,7 @@ app.add_middleware(
 
 def initialize_database() -> None:
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(DATABASE_PATH) as connection:
+    with closing(sqlite3.connect(DATABASE_PATH)) as connection, connection:
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute(
             """
@@ -269,7 +269,7 @@ def build_plan(current: CurrentConditions, mode: WeatherMode) -> DayPlan:
         cafe_text = "Hitta ett kafé med fönsterplats och se vädret sköta underhållningen."
 
     if mode == "indoor":
-        activity_title = "En ny värld bakom nästa dörr."
+        activity_title = "En liten inomhusvärld att upptäcka."
         activity_text = "Välj ett museum, växthus eller en bio med matiné. Ta en helt vanlig tisdag och gör den till en liten utflykt."
 
     return DayPlan(
@@ -408,7 +408,7 @@ async def get_weather(
 
 @app.get("/api/capsules", response_model=list[Capsule])
 def list_capsules() -> list[Capsule]:
-    with connect_database() as connection:
+    with closing(connect_database()) as connection:
         rows = connection.execute(
             "SELECT id, city, temperature, condition, quest, note, saved_at "
             "FROM capsules ORDER BY id DESC LIMIT 30"
@@ -419,7 +419,7 @@ def list_capsules() -> list[Capsule]:
 @app.post("/api/capsules", response_model=Capsule, status_code=201)
 def save_capsule(capsule: CapsuleCreate) -> Capsule:
     saved_at = datetime.now(ZoneInfo("Europe/Stockholm")).isoformat(timespec="seconds")
-    with connect_database() as connection:
+    with closing(connect_database()) as connection, connection:
         cursor = connection.execute(
             "INSERT INTO capsules (city, temperature, condition, quest, note, saved_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
@@ -438,7 +438,7 @@ def save_capsule(capsule: CapsuleCreate) -> Capsule:
 
 @app.delete("/api/capsules/{capsule_id}", status_code=204)
 def delete_capsule(capsule_id: int) -> Response:
-    with connect_database() as connection:
+    with closing(connect_database()) as connection, connection:
         cursor = connection.execute("DELETE FROM capsules WHERE id = ?", (capsule_id,))
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Väderkapseln finns inte.")
