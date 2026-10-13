@@ -124,7 +124,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-hero--storm { --weather-light: #e2e5e8; --weather-photo-wash: rgb(18 23 34 / 58%); --weather-glow-a: rgb(141 174 194 / 24%); --weather-glow-b: rgb(220 194 131 / 14%); }
 .weather-season--spring { --season-photo: url("https://live.staticflickr.com/65535/49849472621_f118562136_b.jpg"); --weather-glow-a: rgb(155 207 170 / 30%); --weather-glow-b: rgb(238 182 154 / 26%); }
 .weather-season--summer { --season-photo: url("https://live.staticflickr.com/4323/35371508564_a9f7f0ae8a_b.jpg"); --weather-glow-a: rgb(87 192 197 / 30%); --weather-glow-b: rgb(255 215 127 / 28%); }
-.weather-season--autumn { --season-photo: url("https://live.staticflickr.com/65535/51407686989_f199ee5057_b.jpg"); --weather-glow-a: rgb(164 159 125 / 24%); --weather-glow-b: rgb(224 133 91 / 30%); }
+.weather-season--autumn { --season-photo: url("https://live.staticflickr.com/65535/52580513392_666231fbbc_b.jpg"); --weather-glow-a: rgb(164 159 125 / 24%); --weather-glow-b: rgb(224 133 91 / 30%); }
 .weather-season--winter { --season-photo: url("https://live.staticflickr.com/65535/50983080013_270f1b574b_b.jpg"); --weather-glow-a: rgb(162 208 230 / 30%); --weather-glow-b: rgb(220 231 237 / 26%); }
 .weather-hero::before {
   position: absolute; inset: 0; content: ""; pointer-events: none;
@@ -176,7 +176,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-main .eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; color: var(--weather-light); }
 .live-pip { width: 6px; height: 6px; border-radius: 50%; background: #e8d38e; }
 .weather-reading { display: flex; align-items: center; gap: 18px; }
-.weather-icon { display: inline-block; font-size: clamp(39px, 5vw, 56px); filter: saturate(.72); animation: icon-float 4s ease-in-out infinite; }
+.weather-icon { display: inline-block; font-size: clamp(34px, 4vw, 44px); filter: saturate(.62); animation: icon-float 4s ease-in-out infinite; }
 .temperature-value { color: #fffdf7; font-family: var(--font-display); font-size: clamp(88px, 13vw, 142px); font-weight: 400; letter-spacing: 0; line-height: .82; font-variant-numeric: lining-nums; }
 .weather-description { margin: 19px 0 0; color: #fffdf7; font-family: var(--font-display); font-size: clamp(23px, 3vw, 34px); font-weight: 400; line-height: 1.1; }
 .weather-feels { margin: 8px 0 0; color: #e1e9e8; font-size: 12px; }
@@ -358,7 +358,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weather-hero::before { background: linear-gradient(95deg, rgb(14 31 42 / 34%), transparent); }
   .weather-sun { top: 0; right: 6%; width: clamp(62px, 18vw, 70px); }
   .temperature-value { font-size: clamp(92px, 25vw, 124px); }
-  .weather-icon { font-size: 40px; }
+  .weather-icon { font-size: 34px; }
   .weather-description { margin-top: 14px; font-size: 25px; }
   .weather-stats { margin-top: 17px; gap: 14px 20px; }
   .weather-hero-side { grid-template-columns: 1fr auto; align-items: center; justify-items: stretch; gap: 9px; }
