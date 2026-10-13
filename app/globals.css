@@ -128,12 +128,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-landscape::before, .weather-landscape::after { position: absolute; content: ""; }
 .weather-landscape::before {
   inset: 35% -8% -20% 12%; opacity: .7; filter: blur(5px);
-  background: radial-gradient(ellipse 72% 82% at 18% 111%, var(--landscape-far) 0 58%, transparent 61%), radial-gradient(ellipse 70% 91% at 83% 116%, var(--landscape-far) 0 54%, transparent 58%);
+  background: radial-gradient(ellipse 110% 92% at 48% 118%, var(--landscape-far) 0 58%, transparent 62%);
   animation: landscape-drift 70s ease-in-out infinite alternate;
 }
 .weather-landscape::after {
   inset: 50% -14% -23% 36%; opacity: .82; filter: blur(3px);
-  background: radial-gradient(ellipse 88% 97% at 22% 125%, var(--landscape-near) 0 60%, transparent 63%), radial-gradient(ellipse 83% 110% at 88% 128%, var(--landscape-near) 0 56%, transparent 59%);
+  background: radial-gradient(ellipse 120% 98% at 60% 130%, var(--landscape-near) 0 60%, transparent 64%);
 }
 .weather-season-particles { position: absolute; inset: 0; display: none; }
 .weather-season-particles::before, .weather-season-particles::after { position: absolute; top: 7%; left: 75%; width: 6px; height: 6px; border-radius: 50%; content: ""; }
