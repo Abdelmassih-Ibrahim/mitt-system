@@ -353,6 +353,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .city-search { width: min(100%, 380px); }
   .weather-hero { min-height: 0; padding: 25px 20px 19px; grid-template-columns: 1fr; gap: 20px; }
   .weather-hero::before { background: linear-gradient(95deg, rgb(14 31 42 / 34%), transparent); }
+  .weather-sun { top: 0; right: 25%; width: clamp(72px, 22vw, 92px); }
+  .weather-cloud { top: 0; right: 1%; width: 110px; height: 34px; }
   .temperature-value { font-size: clamp(92px, 25vw, 124px); }
   .weather-icon { font-size: 40px; }
   .weather-description { margin-top: 14px; font-size: 25px; }
