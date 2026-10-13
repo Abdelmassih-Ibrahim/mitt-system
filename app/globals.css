@@ -322,11 +322,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 @keyframes rain-fall { to { transform: translate3d(-12px, 360px, 0); } }
+@keyframes snow-fall { to { opacity: .3; transform: translate3d(32px, 390px, 0) rotate(220deg); } }
 @keyframes weather-glow-drift { from { transform: translate3d(-2%, -1%, 0) scale(.96); } to { transform: translate3d(2%, 1%, 0) scale(1.04); } }
 @keyframes sun-glow { from { opacity: .62; transform: scale(.96); } to { opacity: .9; transform: scale(1.04); } }
 @keyframes sun-rays-turn { to { transform: rotate(360deg); } }
 @keyframes sun-halo { from { opacity: .35; transform: scale(.92); } to { opacity: .8; transform: scale(1.06); } }
+@keyframes moon-glow { from { opacity: .65; } to { opacity: .92; } }
 @keyframes cloud-drift { from { transform: translateX(-12px); } to { transform: translateX(12px); } }
+@keyframes cloud-bank-drift { from { transform: translate3d(-3%, 0, 0) scale(1); } to { transform: translate3d(3%, -4%, 0) scale(1.08); } }
+@keyframes fog-roll { from { transform: translateX(-5%); } to { transform: translateX(5%); } }
+@keyframes lightning-flash { 0%, 38%, 40%, 44%, 100% { opacity: 0; } 39%, 42% { opacity: .86; } }
 @keyframes icon-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes breathe { to { opacity: .4; transform: scale(.8); } }
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
