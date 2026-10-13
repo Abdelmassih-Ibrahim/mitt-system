@@ -44,14 +44,14 @@ button { color: inherit; }
   background: rgb(247 246 241 / 94%);
 }
 .section-nav {
-  position: sticky; z-index: 10; top: 0; min-height: 44px; padding: 0 max(24px, calc((100vw - 1160px) / 2));
+  position: sticky; z-index: 10; top: 0; min-height: 50px; padding: 0 max(24px, calc((100vw - 1160px) / 2));
   display: flex; align-items: center; gap: 4px; overflow-x: auto; overscroll-behavior-inline: contain;
   border-bottom: 1px solid var(--line); background: rgb(247 246 241 / 94%); backdrop-filter: blur(12px); scrollbar-width: none;
 }
 .section-nav::-webkit-scrollbar { display: none; }
 .section-nav a {
-  min-height: 43px; padding: 0 12px; display: inline-flex; flex: 0 0 auto; align-items: center;
-  border-bottom: 2px solid transparent; color: var(--ink-soft); font-size: 10px; font-weight: 650; white-space: nowrap;
+  min-height: 49px; padding: 0 14px; display: inline-flex; flex: 0 0 auto; align-items: center;
+  border-bottom: 2px solid transparent; color: var(--ink-soft); font-size: 12px; font-weight: 650; white-space: nowrap;
 }
 .section-nav a:hover { border-bottom-color: var(--coral); color: var(--blue-deep); }
 .brand, .topbar-note, .location-label { display: inline-flex; align-items: center; }
@@ -323,7 +323,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .footer-mark { margin: 0 5px; color: var(--coral); }
 .page-footer a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-[id="weather"], [id="daily-plan"], [id="forecast-section"], [id="nearby-places"], [id="memories"], [id="settings"] { scroll-margin-top: 56px; }
+[id="weather"], [id="daily-plan"], [id="forecast-section"], [id="nearby-places"], [id="memories"], [id="settings"] { scroll-margin-top: 60px; }
 
 @keyframes rain-fall { to { transform: translate3d(-12px, 360px, 0); } }
 @keyframes snow-fall { to { opacity: .3; transform: translate3d(32px, 390px, 0) rotate(220deg); } }
@@ -341,7 +341,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .topbar { min-height: 60px; padding: 0 18px; }
   .topbar-note { display: none; }
   .section-nav { padding: 0 10px; gap: 1px; }
-  .section-nav a { padding: 0 10px; font-size: 9px; }
+  .section-nav a { padding: 0 11px; font-size: 11px; }
   .header-actions { gap: 9px; }
   .location-button { width: 35px; min-width: 35px; padding: 0; overflow: hidden; font-size: 0; }
   .location-button span { font-size: 16px; }
