@@ -77,12 +77,12 @@ button { color: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
 .location-button span { color: var(--blue); font-size: 15px; }
 .page-content { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
-.page-intro { padding: 30px 0 18px; }
+.page-intro { padding: 24px 0 14px; }
 .eyebrow { margin: 0 0 10px; color: var(--blue); font-size: 9px; font-weight: 750; letter-spacing: .14em; }
 .intro-heading-row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
 .page-intro h1 {
-  max-width: 930px; margin: 0; color: var(--ink); font-family: var(--font-display);
-  font-size: 54px; font-weight: 400; line-height: 1.02; text-wrap: balance;
+  max-width: 1000px; margin: 0; color: var(--ink); font-family: var(--font-display);
+  font-size: 48px; font-weight: 400; line-height: 1.02; text-wrap: balance;
 }
 .page-intro h1::first-letter { color: var(--blue-deep); }
 .intro-clock { flex: 0 0 auto; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 5px; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -108,7 +108,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   --weather-glow-b: rgb(95 151 188 / 34%);
   --weather-photo-wash: rgb(14 31 42 / 8%);
   --season-photo: linear-gradient(135deg, #526f78, #243c4a);
-  position: relative; min-height: 318px; padding: clamp(27px, 4.6vw, 54px);
+  position: relative; min-height: 300px; padding: clamp(24px, 3vw, 38px);
   display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr); align-items: center; gap: 28px;
   overflow: hidden; border: 1px solid rgb(255 255 255 / 38%); border-radius: 4px;
   background-color: #284357; background-image: linear-gradient(90deg, rgb(8 22 30 / 74%), rgb(8 22 30 / 43%) 37%, transparent 78%), linear-gradient(0deg, rgb(8 22 30 / 46%), transparent 55%), linear-gradient(var(--weather-photo-wash), var(--weather-photo-wash)), var(--season-photo);
@@ -346,9 +346,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .location-button { width: 35px; min-width: 35px; padding: 0; overflow: hidden; font-size: 0; }
   .location-button span { font-size: 16px; }
   .page-content { width: min(100% - 34px, 620px); }
-  .page-intro { padding: 28px 0 18px; }
-  .page-intro h1 { font-size: 39px; }
-  .intro-heading-row { align-items: end; gap: 9px; }
+  .page-intro { padding: 23px 0 15px; }
+  .page-intro h1 { max-width: 100%; font-size: 36px; }
+  .intro-heading-row { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .intro-clock { align-self: flex-end; }
   .intro-clock > span:first-child { font-size: 25px; }
   .intro-clock small { font-size: 10px; }
   .intro-clock-date { max-width: 118px; font-size: 8px; }
@@ -403,7 +404,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .location-button { min-width: 31px; width: 31px; }
   .page-content { width: calc(100% - 26px); }
   .intro-clock > span:first-child { font-size: 22px; }
-  .page-intro h1 { font-size: 34px; }
+  .page-intro h1 { font-size: 32px; }
   .intro-clock-date { max-width: 98px; }
   .temperature-value { font-size: clamp(88px, 27vw, 110px); }
   .weather-stats { gap: 12px; }
