@@ -251,7 +251,7 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertIsNone(place_without_photo.image_url)
         self.assertIsNone(place_without_photo.image_page_url)
 
-    def test_commons_search_uses_nearest_matching_photo_and_source_page(self) -> None:
+    def test_commons_name_search_uses_nearest_matching_photo_and_source_page(self) -> None:
         result = commons_image_from_response(
             {
                 "query": {
@@ -315,7 +315,7 @@ class WeatherLogicTests(unittest.TestCase):
 
 
 class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
-    async def test_geosearch_adds_nearby_photo_and_source_link(self) -> None:
+    async def test_name_search_adds_matching_photo_and_source_link(self) -> None:
         class FakeResponse:
             def raise_for_status(self) -> None:
                 return None
