@@ -20,6 +20,7 @@ const ui = {
   sv: {
     tagline: "Väder med omtanke",
     intro: "En dagsplan med kläder, bästa utetid och platser som passar vädret.",
+    loadingHeadline: "Så möter du vädret idag.",
     navigation: { label: "Snabbnavigering", weather: "Nu", plan: "Dagsplan", forecast: "Timprognos", places: "Platser", memories: "Sparat", settings: "Inställningar" },
     current: "JUST NU I",
     feels: "Känns som",
@@ -69,6 +70,7 @@ const ui = {
   en: {
     tagline: "Weather, with a little care",
     intro: "A daily plan for what to wear, when to go out, and places that fit the weather.",
+    loadingHeadline: "Meet today's weather.",
     navigation: { label: "Quick navigation", weather: "Now", plan: "Day plan", forecast: "By the hour", places: "Nearby", memories: "Saved", settings: "Settings" },
     current: "RIGHT NOW IN",
     feels: "Feels like",
@@ -300,7 +302,7 @@ export default function WeatherApp() {
     ? preferences.language === "en"
       ? localize(weather.headline, "en")
       : weather.headline
-    : t.intro;
+    : t.loadingHeadline;
 
   const useMyLocation = () => {
     setStatusMessage(t.permission);
