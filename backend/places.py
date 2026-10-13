@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import math
 import time
 from typing import Literal
@@ -18,6 +19,7 @@ OVERPASS_URLS = (
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "Vadervett/0.1 (weather-aware local discovery)"
 CACHE_SECONDS = 600
+COMMONS_IMAGE_CACHE_SECONDS = 86_400
 
 CATEGORY_FILTERS: dict[PlaceCategory, str] = {
     "all": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(cafe|library|cinema|arts_centre|marketplace|gym|sports_centre)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];nwr(around:{radius},{latitude},{longitude})[name][leisure=park];',
@@ -64,6 +66,60 @@ class CityResult(BaseModel):
 
 
 _place_cache: dict[tuple[object, ...], tuple[float, PlaceSearchResult]] = {}
+_commons_image_cache: dict[tuple[float, float], tuple[float, tuple[str, str] | None]] = {}
+
+
+def commons_image_from_response(data: dict) -> tuple[str, str] | None:
+    pages = data.get("query", {}).get("pages", {})
+    ordered_pages = sorted(pages.values(), key=lambda page: page.get("index", 0))
+    for page in ordered_pages:
+        image_info = page.get("imageinfo", [])
+        if not image_info:
+            continue
+        info = image_info[0]
+        image_url = info.get("thumburl") or info.get("url")
+        source_url = info.get("descriptionurl")
+        if image_url and source_url:
+            return image_url, source_url
+    return None
+
+
+async def _find_commons_image(client: httpx.AsyncClient, place: NearbyPlace) -> None:
+    if place.image_url:
+        return
+
+    cache_key = (round(place.latitude, 5), round(place.longitude, 5))
+    cached = _commons_image_cache.get(cache_key)
+    if cached and time.monotonic() - cached[0] < COMMONS_IMAGE_CACHE_SECONDS:
+        if cached[1]:
+            place.image_url, place.image_page_url = cached[1]
+        return
+
+    image: tuple[str, str] | None = None
+    try:
+        response = await client.get(
+            "https://commons.wikimedia.org/w/api.php",
+            params={
+                "action": "query",
+                "generator": "geosearch",
+                "ggscoord": f"{place.latitude}|{place.longitude}",
+                "ggsradius": 80,
+                "ggsnamespace": 6,
+                "ggslimit": 8,
+                "prop": "imageinfo",
+                "iiprop": "url",
+                "iiurlwidth": 640,
+                "format": "json",
+            },
+        )
+        response.raise_for_status()
+        image = commons_image_from_response(response.json())
+    except (httpx.HTTPError, ValueError, TypeError):
+        pass
+
+    _commons_image_cache[cache_key] = (time.monotonic(), image)
+    if image:
+        place.image_url, place.image_page_url = image
 
 
 def haversine_meters(latitude_a: float, longitude_a: float, latitude_b: float, longitude_b: float) -> float:
