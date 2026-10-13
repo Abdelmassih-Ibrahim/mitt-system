@@ -15,13 +15,14 @@ const DEFAULT_PREFERENCES: Preferences = {
   interests: ["coffee", "nature", "culture"],
 };
 const REFRESH_INTERVAL = 15 * 60 * 1000;
+type MainView = "today" | "plan" | "forecast" | "places" | "saved";
 
 const ui = {
   sv: {
     tagline: "Väder med omtanke",
     intro: "En dagsplan med kläder, bästa utetid och platser som passar vädret.",
     loadingHeadline: "Så möter du vädret idag.",
-    navigation: { label: "Snabbnavigering", weather: "Nu", plan: "Dagsplan", forecast: "Timprognos", places: "Platser", memories: "Sparat", settings: "Inställningar" },
+    navigation: { label: "Huvudmeny", today: "Idag", plan: "Dagsplan", forecast: "Timprognos", places: "Platser", saved: "Sparat & val" },
     current: "JUST NU I",
     feels: "Känns som",
     humidity: "Luftfuktighet",
@@ -71,7 +72,7 @@ const ui = {
     tagline: "Weather, with a little care",
     intro: "A daily plan for what to wear, when to go out, and places that fit the weather.",
     loadingHeadline: "Meet today's weather.",
-    navigation: { label: "Quick navigation", weather: "Now", plan: "Day plan", forecast: "By the hour", places: "Nearby", memories: "Saved", settings: "Settings" },
+    navigation: { label: "Main menu", today: "Today", plan: "Day plan", forecast: "Hourly", places: "Places", saved: "Saved & settings" },
     current: "RIGHT NOW IN",
     feels: "Feels like",
     humidity: "Humidity",
@@ -180,6 +181,7 @@ export default function WeatherApp() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<Preferences>(DEFAULT_PREFERENCES);
   const [mode, setMode] = useState<Mode>("outdoor");
+  const [activeView, setActiveView] = useState<MainView>("today");
   const [now, setNow] = useState<Date | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -303,6 +305,13 @@ export default function WeatherApp() {
       ? localize(weather.headline, "en")
       : weather.headline
     : t.loadingHeadline;
+  const navigationItems: Array<{ id: MainView; label: string }> = [
+    { id: "today", label: t.navigation.today },
+    { id: "plan", label: t.navigation.plan },
+    { id: "forecast", label: t.navigation.forecast },
+    { id: "places", label: t.navigation.places },
+    { id: "saved", label: t.navigation.saved },
+  ];
 
   const useMyLocation = () => {
     setStatusMessage(t.permission);
@@ -433,12 +442,11 @@ export default function WeatherApp() {
       </header>
 
       <nav className="section-nav" aria-label={t.navigation.label}>
-        <a href="#weather">{t.navigation.weather}</a>
-        <a href="#daily-plan">{t.navigation.plan}</a>
-        <a href="#forecast-section">{t.navigation.forecast}</a>
-        <a href="#nearby-places">{t.navigation.places}</a>
-        <a href="#memories">{t.navigation.memories}</a>
-        <a href="#settings">{t.navigation.settings}</a>
+        {navigationItems.map((item) => (
+          <button key={item.id} type="button" aria-current={activeView === item.id ? "page" : undefined} onClick={() => setActiveView(item.id)}>
+            {item.label}
+          </button>
+        ))}
       </nav>
 
       <div className="page-content" id="top">
