@@ -77,12 +77,12 @@ button { color: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; }
 .location-button span { color: var(--blue); font-size: 15px; }
 .page-content { width: min(1160px, calc(100% - 48px)); margin: 0 auto; }
-.page-intro { padding: 39px 0 23px; }
+.page-intro { padding: 30px 0 18px; }
 .eyebrow { margin: 0 0 10px; color: var(--blue); font-size: 9px; font-weight: 750; letter-spacing: .14em; }
 .intro-heading-row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
 .page-intro h1 {
-  max-width: 780px; margin: 0; color: var(--ink); font-family: var(--font-display);
-  font-size: clamp(38px, 5.6vw, 66px); font-weight: 400; line-height: 1.02; text-wrap: balance;
+  max-width: 930px; margin: 0; color: var(--ink); font-family: var(--font-display);
+  font-size: 54px; font-weight: 400; line-height: 1.02; text-wrap: balance;
 }
 .page-intro h1::first-letter { color: var(--blue-deep); }
 .intro-clock { flex: 0 0 auto; display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 5px; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -175,8 +175,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-main, .weather-hero-side { position: relative; z-index: 2; }
 .weather-main .eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; color: var(--weather-light); }
 .live-pip { width: 6px; height: 6px; border-radius: 50%; background: #e8d38e; }
-.weather-reading { display: flex; align-items: center; gap: 18px; }
-.weather-icon { display: inline-block; font-size: clamp(34px, 4vw, 44px); filter: saturate(.62); animation: icon-float 4s ease-in-out infinite; }
+.weather-reading { display: flex; align-items: center; gap: 0; }
+.weather-icon { display: none; }
 .temperature-value { color: #fffdf7; font-family: var(--font-display); font-size: clamp(88px, 13vw, 142px); font-weight: 400; letter-spacing: 0; line-height: .82; font-variant-numeric: lining-nums; }
 .weather-description { margin: 19px 0 0; color: #fffdf7; font-family: var(--font-display); font-size: clamp(23px, 3vw, 34px); font-weight: 400; line-height: 1.1; }
 .weather-feels { margin: 8px 0 0; color: #e1e9e8; font-size: 12px; }
@@ -347,7 +347,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .location-button span { font-size: 16px; }
   .page-content { width: min(100% - 34px, 620px); }
   .page-intro { padding: 28px 0 18px; }
-  .page-intro h1 { font-size: clamp(36px, 8.3vw, 52px); }
+  .page-intro h1 { font-size: 39px; }
   .intro-heading-row { align-items: end; gap: 9px; }
   .intro-clock > span:first-child { font-size: 25px; }
   .intro-clock small { font-size: 10px; }
@@ -358,7 +358,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weather-hero::before { background: linear-gradient(95deg, rgb(14 31 42 / 34%), transparent); }
   .weather-sun { top: 0; right: 6%; width: clamp(62px, 18vw, 70px); }
   .temperature-value { font-size: clamp(92px, 25vw, 124px); }
-  .weather-icon { font-size: 34px; }
   .weather-description { margin-top: 14px; font-size: 25px; }
   .weather-stats { margin-top: 17px; gap: 14px 20px; }
   .weather-hero-side { grid-template-columns: 1fr auto; align-items: center; justify-items: stretch; gap: 9px; }
@@ -404,6 +403,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .location-button { min-width: 31px; width: 31px; }
   .page-content { width: calc(100% - 26px); }
   .intro-clock > span:first-child { font-size: 22px; }
+  .page-intro h1 { font-size: 34px; }
   .intro-clock-date { max-width: 98px; }
   .temperature-value { font-size: clamp(88px, 27vw, 110px); }
   .weather-stats { gap: 12px; }
