@@ -276,8 +276,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .place-filters button { min-height: 31px; padding: 0 9px; border: 1px solid #d0d8d7; border-radius: 2px; background: transparent; color: var(--ink-soft); font-size: 9px; cursor: pointer; }
 .place-filters button.is-active { border-color: var(--blue-deep); background: var(--blue-deep); color: white; }
 .places-list { border-top: 1px solid var(--line); }
-.place-row { padding: 14px 0; display: grid; grid-template-columns: 31px minmax(0,1fr) auto; gap: 13px; align-items: start; border-bottom: 1px solid var(--line); }
-.place-category-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #bdcaca; border-radius: 50%; color: var(--blue-deep); font-family: var(--font-display); font-size: 13px; }
+.place-row { padding: 14px 0; display: grid; grid-template-columns: 116px minmax(0,1fr) auto; gap: 15px; align-items: start; border-bottom: 1px solid var(--line); }
+.place-photo { width: 116px; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 3px; background-color: #e6e9e3; background-position: center; background-size: cover; }
+.place-photo--placeholder { display: grid; place-items: center; background: linear-gradient(145deg, #dce8e2, #b6c9c7 56%, #e9dfcb); }
+.place-photo--placeholder span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgb(32 59 80 / 45%); border-radius: 50%; color: var(--blue-deep); font-family: var(--font-display); font-size: 16px; }
 .place-copy { min-width: 0; }
 .place-name-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px 12px; }
 .place-name-line h3 { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 18px; font-weight: 400; }
@@ -394,7 +396,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .plan-card .card-reason { margin-top: auto; padding-top: 7px; }
   .section-heading--editorial { align-items: flex-start; flex-direction: column; gap: 10px; }
   .forecast-section, .places-section { padding: 25px 0; }
-  .place-row { grid-template-columns: 26px minmax(0,1fr); gap: 8px; }
+  .place-row { grid-template-columns: 82px minmax(0,1fr); gap: 10px; }
+  .place-photo { width: 82px; aspect-ratio: 1; }
   .place-actions { grid-column: 2; flex-direction: row; align-items: center; gap: 13px; }
   .preferences-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .capsule-heading { align-items: flex-start; flex-direction: column; }
