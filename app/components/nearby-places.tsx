@@ -19,6 +19,7 @@ const copy = {
     retry: "Försök igen",
     directions: "Vägbeskrivning",
     map: "Visa karta",
+    photoSource: "Bildkälla",
     hours: "Kartlagda tider",
     noHours: "Öppettider saknas i kartdatan",
     feeUnknown: "Avgift okänd",
@@ -42,6 +43,7 @@ const copy = {
     retry: "Try again",
     directions: "Directions",
     map: "View map",
+    photoSource: "Photo source",
     hours: "Hours in map data",
     noHours: "Opening hours are not in the map data",
     feeUnknown: "Fee unknown",
@@ -171,7 +173,14 @@ export default function NearbyPlaces({
         <div className="places-list">
           {places.slice(0, 6).map((place) => (
             <article className="place-row" key={`${place.osm_type}-${place.osm_id}`}>
-              <span className="place-category-mark" aria-hidden="true">{place.category === "Kafé" ? "C" : "M"}</span>
+              <div
+                className={`place-photo${place.image_url ? " place-photo--image" : " place-photo--placeholder"}`}
+                role="img"
+                aria-label={place.image_url ? `${place.name}, Wikimedia Commons photo` : `${place.category}: ${place.name}`}
+                style={place.image_url ? { backgroundImage: `url("${place.image_url}")` } : undefined}
+              >
+                {!place.image_url ? <span aria-hidden="true">{place.category === "Kafé" ? "C" : "M"}</span> : null}
+              </div>
               <div className="place-copy">
                 <div className="place-name-line"><h3>{place.name}</h3><span>{formatDistance(place.distance_meters, language)}</span></div>
                 <p className="place-meta">{localizeCategory(place.category, language)}{place.address ? ` · ${place.address}` : ""}</p>
@@ -181,6 +190,7 @@ export default function NearbyPlaces({
               <div className="place-actions">
                 <a href={place.directions_url} target="_blank" rel="noreferrer">{text.directions} ↗</a>
                 <a href={place.map_url} target="_blank" rel="noreferrer">{text.map}</a>
+                {place.image_page_url ? <a href={place.image_page_url} target="_blank" rel="noreferrer">{text.photoSource} ↗</a> : null}
               </div>
             </article>
           ))}
