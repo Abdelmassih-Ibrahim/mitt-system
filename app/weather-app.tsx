@@ -15,14 +15,14 @@ const DEFAULT_PREFERENCES: Preferences = {
   interests: ["coffee", "nature", "culture"],
 };
 const REFRESH_INTERVAL = 15 * 60 * 1000;
-type MainView = "today" | "plan" | "forecast" | "places" | "saved";
+ type MainView = "today" | "places" | "saved";
 
 const ui = {
   sv: {
     tagline: "Väder med omtanke",
     intro: "En dagsplan med kläder, bästa utetid och platser som passar vädret.",
     loadingHeadline: "Så möter du vädret idag.",
-    navigation: { label: "Huvudmeny", today: "Idag", plan: "Dagsplan", forecast: "Timprognos", places: "Platser", saved: "Sparat & val" },
+    navigation: { label: "Huvudmeny", today: "Idag", places: "Platser", saved: "Sparat & val" },
     current: "JUST NU I",
     feels: "Känns som",
     humidity: "Luftfuktighet",
@@ -72,7 +72,7 @@ const ui = {
     tagline: "Weather, with a little care",
     intro: "A daily plan for what to wear, when to go out, and places that fit the weather.",
     loadingHeadline: "Meet today's weather.",
-    navigation: { label: "Main menu", today: "Today", plan: "Day plan", forecast: "Hourly", places: "Places", saved: "Saved & settings" },
+    navigation: { label: "Main menu", today: "Today", places: "Places", saved: "Saved & settings" },
     current: "RIGHT NOW IN",
     feels: "Feels like",
     humidity: "Humidity",
@@ -307,8 +307,6 @@ export default function WeatherApp() {
     : t.loadingHeadline;
   const navigationItems: Array<{ id: MainView; label: string }> = [
     { id: "today", label: t.navigation.today },
-    { id: "plan", label: t.navigation.plan },
-    { id: "forecast", label: t.navigation.forecast },
     { id: "places", label: t.navigation.places },
     { id: "saved", label: t.navigation.saved },
   ];
@@ -488,8 +486,17 @@ export default function WeatherApp() {
           </div>
         ) : null}
 
-        {activeView === "plan" ? (
-          <div className="view-panel view-panel--plan">
+        <section id="daily-plan" className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
+
+        <section className="outfit-section"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.outfit}</p><h2>{selectedPlan ? localize(selectedPlan.outfit_title, preferences.language) : t.loading}</h2><p className="section-description">{selectedPlan ? localize(selectedPlan.outfit_text, preferences.language) : ""}</p></div><span className="outfit-mark" aria-hidden="true">01</span></div>{selectedPlan?.tip ? <p className="outfit-tip">{localize(selectedPlan.tip, preferences.language)}</p> : null}</section>
+
+        <section className="plan-section" aria-labelledby="plan-title"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="plan-title">{t.activityTitle}</h2></div><p className="section-aside">{t.selected}: {t.modes[mode]}</p></div><div className="plan-grid plan-grid--editorial"><article className="plan-card"><span className="card-label">02 / {t.outdoor}</span><h3>{localize(weather?.plans.outdoor.activity_title ?? "", preferences.language) || "—"}</h3><p>{localize(weather?.plans.outdoor.activity_text ?? "", preferences.language)}</p><p className="card-reason">{weather?.outdoor_window.available ? `${weather.outdoor_window.start}–${weather.outdoor_window.end}` : (preferences.language === "sv" ? "Ingen säker väderlucka utlovas" : "No suitable weather window promised")}</p></article><article className="plan-card"><span className="card-label">03 / {t.indoor}</span><h3>{localize(weather?.plans.indoor.activity_title ?? "", preferences.language) || "—"}</h3><p>{localize(weather?.plans.indoor.activity_text ?? "", preferences.language)}</p><p className="card-reason">{selectedPlan ? localize(selectedPlan.cafe_text, preferences.language) : ""}</p></article><article className="plan-card plan-card--accent"><span className="card-label">04 / {t.adventure}</span><h3>{localize(selectedQuest?.title ?? "", preferences.language) || "—"}</h3><p>{localize(selectedQuest?.description ?? "", preferences.language)}</p><p className="card-reason">{selectedQuest?.reward}</p></article></div></section>
+
+        {weather ? <HourlyForecast hours={weather.hourly} window={weather.outdoor_window} language={preferences.language} unit={preferences.temperature_unit} /> : <p className="forecast-empty">{t.loading}</p>}
+          </div>
+        ) : null}
+
+        {activeView === "places" ? <div className="view-panel view-panel--places"><NearbyPlaces coordinates={coordinates} weather={weather} radius={preferences.walking_distance_meters} language={preferences.language} budget={preferences.budget} interests={preferences.interests} /></div> : null}
         <section id="daily-plan" className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
 
         <section className="outfit-section"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.outfit}</p><h2>{selectedPlan ? localize(selectedPlan.outfit_title, preferences.language) : t.loading}</h2><p className="section-description">{selectedPlan ? localize(selectedPlan.outfit_text, preferences.language) : ""}</p></div><span className="outfit-mark" aria-hidden="true">01</span></div>{selectedPlan?.tip ? <p className="outfit-tip">{localize(selectedPlan.tip, preferences.language)}</p> : null}</section>
