@@ -483,8 +483,6 @@ export default function WeatherApp() {
           <div className="score-number-block"><p className="eyebrow">{t.score}</p><div><strong>{weather?.survival.score ?? "—"}</strong><span>/100</span></div><p>{weather ? localize(weather.survival.level, preferences.language) : t.loading}</p></div>
           <div className="score-details"><div className="score-track" role="meter" aria-label={t.score} aria-valuemin={0} aria-valuemax={100} aria-valuenow={weather?.survival.score ?? 0}><span style={{ width: `${weather?.survival.score ?? 0}%` }} /></div><p>{weather ? localize(weather.survival.summary, preferences.language) : t.scoreNote}</p><details><summary>{t.whyScore}</summary><p className="score-disclaimer">{weather?.survival.disclaimer ?? t.scoreNote}</p>{weather?.survival.factors.length ? <ul>{weather.survival.factors.map((factor) => <li key={factor.label}><strong>{factor.label} −{factor.deduction}</strong><span>{factor.explanation}</span></li>)}</ul> : <p>{t.noFactors}</p>}</details></div>
         </section>
-          </div>
-        ) : null}
 
         <section id="daily-plan" className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
 
