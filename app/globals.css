@@ -127,13 +127,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-landscape { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
 .weather-landscape::before, .weather-landscape::after { position: absolute; content: ""; filter: blur(2px); }
 .weather-landscape::before {
-  left: 24%; bottom: -20%; width: 90%; height: 70%; opacity: .62;
+  left: 18%; bottom: -12%; width: 100%; height: 82%; opacity: .72;
   background: linear-gradient(180deg, var(--landscape-far), var(--landscape-near));
   clip-path: polygon(0 59%, 9% 48%, 18% 54%, 28% 34%, 38% 44%, 48% 25%, 59% 42%, 69% 30%, 79% 49%, 89% 35%, 100% 47%, 100% 100%, 0 100%);
   animation: landscape-drift 70s ease-in-out infinite alternate;
 }
 .weather-landscape::after {
-  left: 48%; bottom: -23%; width: 72%; height: 56%; opacity: .78;
+  left: 44%; bottom: -22%; width: 80%; height: 72%; opacity: .84;
   background: linear-gradient(180deg, var(--landscape-far), var(--landscape-near));
   clip-path: polygon(0 51%, 12% 39%, 24% 45%, 39% 25%, 51% 37%, 65% 17%, 78% 38%, 89% 26%, 100% 35%, 100% 100%, 0 100%);
 }
