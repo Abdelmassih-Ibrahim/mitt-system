@@ -353,7 +353,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .page-intro { padding: 23px 0 15px; }
   .page-intro h1 { max-width: 100%; font-size: 36px; }
   .intro-heading-row { align-items: flex-start; flex-direction: column; gap: 7px; }
-  .intro-clock { align-self: flex-end; }
+  .intro-clock { display: none; }
   .intro-clock > span:first-child { font-size: 25px; }
   .intro-clock small { font-size: 10px; }
   .intro-clock-date { max-width: 118px; font-size: 8px; }
@@ -364,7 +364,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weather-sun { top: 0; right: 6%; width: clamp(62px, 18vw, 70px); }
   .temperature-value { font-size: clamp(92px, 25vw, 124px); }
   .weather-description { margin-top: 14px; font-size: 25px; }
-  .weather-stats { margin-top: 17px; gap: 14px 20px; }
+  .weather-stats { margin-top: 14px; gap: 12px 17px; }
+  .weather-highlights { margin-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .highlight-card { min-height: 0; padding: 7px; }
+  .highlight-card p { font-size: 8px; }
   .weather-hero-side { grid-template-columns: 1fr auto; align-items: center; justify-items: stretch; gap: 9px; }
   .daylight-panel { width: auto; padding: 12px 14px; }
   .daylight-panel .eyebrow { margin-bottom: 11px; }
@@ -374,19 +377,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .weather-source { align-items: flex-end; flex-direction: column; font-size: 8px; }
   .weather-source > span { max-width: 115px; line-height: 1.4; }
   .refresh-button { font-size: 8px; }
-  .score-section { padding: 18px 0; grid-template-columns: 1fr; gap: 12px; }
-  .score-number-block { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 12px; }
-  .score-number-block .eyebrow { grid-column: 1 / -1; }
-  .score-number-block > p:last-child { margin: 0; }
-  .score-number-block > div strong { font-size: 39px; }
+  .score-section { padding: 13px 0; grid-template-columns: 116px minmax(0, 1fr); align-items: center; gap: 12px; }
+  .score-number-block { min-width: 0; }
+  .score-number-block .eyebrow { margin-bottom: 2px; }
+  .score-number-block > p:last-child { margin: 3px 0 0; font-size: 9px; }
+  .score-number-block > div strong { font-size: 34px; }
+  .score-details > p { font-size: 9px; line-height: 1.35; }
+  .score-details details { margin-top: 5px; font-size: 9px; }
   .mode-section { align-items: flex-start; flex-direction: column; gap: 12px; padding-top: 21px; }
   .mode-switch { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); }
   .mode-switch button { min-height: 38px; padding: 0 5px; font-size: 9px; }
   .outfit-section { margin: 10px 0 22px; padding: 16px; }
-  .plan-grid { grid-template-columns: 1fr; border-bottom: 0; }
-  .plan-card, .plan-card + .plan-card { min-height: 0; padding: 14px 0; border-right: 0; border-bottom: 1px solid var(--line); }
+  .plan-grid { grid-auto-columns: minmax(82%, 1fr); grid-auto-flow: column; grid-template-columns: none; gap: 10px; overflow-x: auto; padding: 0 0 10px; border-bottom: 1px solid var(--line); scroll-snap-type: x mandatory; scrollbar-width: thin; }
+  .plan-card, .plan-card + .plan-card { min-height: 210px; padding: 14px; border: 1px solid var(--line); background: rgb(255 255 255 / 48%); scroll-snap-align: start; }
   .plan-card h3 { margin-top: 10px; font-size: 20px; }
-  .plan-card .card-reason { margin-top: 0; padding-top: 7px; }
+  .plan-card .card-reason { margin-top: auto; padding-top: 7px; }
   .section-heading--editorial { align-items: flex-start; flex-direction: column; gap: 10px; }
   .forecast-section, .places-section { padding: 25px 0; }
   .place-row { grid-template-columns: 26px minmax(0,1fr); gap: 8px; }
