@@ -362,6 +362,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @keyframes rain-fall { to { transform: translate3d(-12px, 360px, 0); } }
 @keyframes snow-fall { to { opacity: .3; transform: translate3d(32px, 390px, 0) rotate(220deg); } }
 @keyframes weather-glow-drift { from { transform: translate3d(-2%, -1%, 0) scale(.96); } to { transform: translate3d(2%, 1%, 0) scale(1.04); } }
+@keyframes landscape-drift { from { transform: translate3d(-1%, 0, 0); } to { transform: translate3d(1%, -2%, 0); } }
+@keyframes seasonal-fall { from { transform: translate3d(-12px, -20px, 0) rotate(0deg); } to { transform: translate3d(-72px, 370px, 0) rotate(240deg); } }
+@keyframes pollen-drift { from { transform: translate3d(-8px, 9px, 0); } to { transform: translate3d(12px, -18px, 0); } }
+@keyframes frost-drift { from { transform: translate3d(-12px, -4px, 0); } to { transform: translate3d(14px, 9px, 0); } }
 @keyframes sun-glow { from { opacity: .62; transform: scale(.96); } to { opacity: .9; transform: scale(1.04); } }
 @keyframes sun-rays-turn { to { transform: rotate(360deg); } }
 @keyframes sun-halo { from { opacity: .35; transform: scale(.92); } to { opacity: .8; transform: scale(1.06); } }
