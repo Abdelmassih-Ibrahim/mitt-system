@@ -127,13 +127,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-landscape { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
 .weather-landscape::before, .weather-landscape::after { position: absolute; content: ""; }
 .weather-landscape::before {
-  inset: 35% -8% -20% 12%; opacity: .7; filter: blur(5px);
-  background: radial-gradient(ellipse 110% 92% at 48% 118%, var(--landscape-far) 0 58%, transparent 62%);
+  inset: 30% -8% -18% 12%; opacity: .68; filter: blur(4px);
+  background: linear-gradient(180deg, var(--landscape-far), var(--landscape-near));
+  clip-path: polygon(0 73%, 4% 67%, 8% 62%, 12% 58%, 16% 55%, 20% 53%, 24% 52%, 28% 53%, 32% 55%, 36% 58%, 40% 62%, 44% 66%, 48% 70%, 52% 73%, 56% 75%, 60% 76%, 64% 75%, 68% 72%, 72% 68%, 76% 64%, 80% 61%, 84% 58%, 88% 56%, 92% 55%, 96% 56%, 100% 58%, 100% 100%, 0 100%);
   animation: landscape-drift 70s ease-in-out infinite alternate;
 }
 .weather-landscape::after {
-  inset: 50% -14% -23% 36%; opacity: .82; filter: blur(3px);
-  background: radial-gradient(ellipse 120% 98% at 60% 130%, var(--landscape-near) 0 60%, transparent 64%);
+  inset: 46% -14% -23% 36%; opacity: .82; filter: blur(3px);
+  background: linear-gradient(180deg, var(--landscape-far), var(--landscape-near));
+  clip-path: polygon(0 77%, 5% 70%, 10% 64%, 15% 59%, 20% 56%, 25% 55%, 30% 57%, 35% 61%, 40% 66%, 45% 71%, 50% 75%, 55% 78%, 60% 79%, 65% 77%, 70% 73%, 75% 68%, 80% 63%, 85% 59%, 90% 57%, 95% 58%, 100% 61%, 100% 100%, 0 100%);
 }
 .weather-season-particles { position: absolute; inset: 0; display: none; }
 .weather-season-particles::before, .weather-season-particles::after { position: absolute; top: 7%; left: 75%; width: 6px; height: 6px; border-radius: 50%; content: ""; }
