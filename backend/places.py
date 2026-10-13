@@ -38,6 +38,7 @@ class NearbyPlace(BaseModel):
     opening_hours: str | None
     fee: bool | None
     image_url: str | None = None
+    image_page_url: str | None = None
     map_url: str
     directions_url: str
     reason: str
@@ -177,8 +178,12 @@ def parse_elements(
         category_label = classify_place(tags)
         commons_file = tags.get("wikimedia_commons", "")
         image_url = None
+        image_page_url = None
         if commons_file.startswith("File:"):
-            image_url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{quote(commons_file[5:], safe='')}"
+            file_name = commons_file[5:].strip().replace(" ", "_")
+            encoded_file_name = quote(file_name, safe="_")
+            image_url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{encoded_file_name}"
+            image_page_url = f"https://commons.wikimedia.org/wiki/File:{encoded_file_name}"
         place = NearbyPlace(
                 osm_type=place_type,
                 osm_id=osm_id,
@@ -191,6 +196,7 @@ def parse_elements(
                 opening_hours=tags.get("opening_hours"),
                 fee=has_fee,
                 image_url=image_url,
+                image_page_url=image_page_url,
                 map_url=f"https://www.openstreetmap.org/{quote(place_type)}/{osm_id}",
                 directions_url=(
                     "https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route="
