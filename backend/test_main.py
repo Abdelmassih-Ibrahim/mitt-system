@@ -233,7 +233,7 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual(places[0].category, "Kafé")
         self.assertEqual(places[0].address, "Exempelgatan 4")
         self.assertEqual(places[0].opening_hours, "Mo-Fr 08:00-18:00")
-        self.assertEqual(places[0].image_url, "https://commons.wikimedia.org/wiki/Special:FilePath/Stockholm%20park.jpg")
+        self.assertEqual(places[0].image_url, "https://commons.wikimedia.org/wiki/Special:FilePath/Stockholm_park.jpg")
         self.assertEqual(places[0].image_page_url, "https://commons.wikimedia.org/wiki/File:Stockholm_park.jpg")
         self.assertIn("openstreetmap.org/directions", places[0].directions_url)
         self.assertIn("tak", places[0].reason)
