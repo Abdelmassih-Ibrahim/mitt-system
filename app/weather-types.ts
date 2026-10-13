@@ -115,6 +115,7 @@ export type NearbyPlace = {
   address: string | null;
   opening_hours: string | null;
   fee: boolean | null;
+  image_url: string | null;
   map_url: string;
   directions_url: string;
   reason: string;

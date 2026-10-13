@@ -214,6 +214,7 @@ class WeatherLogicTests(unittest.TestCase):
                         "addr:street": "Exempelgatan",
                         "addr:housenumber": "4",
                         "opening_hours": "Mo-Fr 08:00-18:00",
+                        "wikimedia_commons": "File:Stockholm park.jpg",
                     },
                 },
                 {"type": "node", "id": 789, "lat": 59.3294, "lon": 18.0686, "tags": {"amenity": "cafe"}},
@@ -232,6 +233,7 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertEqual(places[0].category, "Kafé")
         self.assertEqual(places[0].address, "Exempelgatan 4")
         self.assertEqual(places[0].opening_hours, "Mo-Fr 08:00-18:00")
+        self.assertEqual(places[0].image_url, "https://commons.wikimedia.org/wiki/Special:FilePath/Stockholm%20park.jpg")
         self.assertIn("openstreetmap.org/directions", places[0].directions_url)
         self.assertIn("tak", places[0].reason)
 
