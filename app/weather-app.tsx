@@ -19,7 +19,8 @@ const REFRESH_INTERVAL = 15 * 60 * 1000;
 const ui = {
   sv: {
     tagline: "Väder med omtanke",
-    intro: "Vädret bestämmer tonen. Du bestämmer dagen.",
+    intro: "En dagsplan med kläder, bästa utetid och platser som passar vädret.",
+    navigation: { label: "Snabbnavigering", weather: "Nu", plan: "Dagsplan", forecast: "Timprognos", places: "Platser", memories: "Sparat", settings: "Inställningar" },
     current: "JUST NU I",
     feels: "Känns som",
     humidity: "Luftfuktighet",
@@ -67,7 +68,8 @@ const ui = {
   },
   en: {
     tagline: "Weather, with a little care",
-    intro: "The weather sets the tone. You choose the day.",
+    intro: "A daily plan for what to wear, when to go out, and places that fit the weather.",
+    navigation: { label: "Quick navigation", weather: "Now", plan: "Day plan", forecast: "By the hour", places: "Nearby", memories: "Saved", settings: "Settings" },
     current: "RIGHT NOW IN",
     feels: "Feels like",
     humidity: "Humidity",
@@ -428,6 +430,15 @@ export default function WeatherApp() {
         </div>
       </header>
 
+      <nav className="section-nav" aria-label={t.navigation.label}>
+        <a href="#weather">{t.navigation.weather}</a>
+        <a href="#daily-plan">{t.navigation.plan}</a>
+        <a href="#forecast-section">{t.navigation.forecast}</a>
+        <a href="#nearby-places">{t.navigation.places}</a>
+        <a href="#memories">{t.navigation.memories}</a>
+        <a href="#settings">{t.navigation.settings}</a>
+      </nav>
+
       <div className="page-content" id="top">
         <section className="page-intro">
           <p className="eyebrow">{t.tagline}</p>
@@ -437,9 +448,8 @@ export default function WeatherApp() {
           {cityResults.length ? <div className="city-results" role="listbox" aria-label={t.nearby}>{cityResults.map((city) => <button key={`${city.latitude}-${city.longitude}`} onClick={() => chooseLocation(city)}>{city.name}<span>{city.timezone}</span></button>)}</div> : null}
         </section>
 
-        <section className={`weather-hero editorial-hero weather-hero--${weatherMood} weather-season--${seasonForDate(weather?.date)}${isIntenseWeather ? " weather-hero--intense" : ""}`} aria-label={`${t.current} ${displayLocation}`}>
-          <div className="weather-landscape" aria-hidden="true"><span className="weather-season-particles" /></div>
-          <div className={weatherAtmosphereClass} aria-hidden="true"><span className="weather-sun" /><span className="weather-cloud" />{Array.from({ length: 18 }, (_, index) => <i key={index} className="weather-particle" style={{ left: `${(index * 47) % 95 + 2}%`, top: `-${(index * 23) % 70}px`, animationDelay: `-${(index * 0.31) % 3}s` }} />)}</div>
+        <section id="weather" className={`weather-hero editorial-hero weather-hero--${weatherMood} weather-season--${seasonForDate(weather?.date)}${isIntenseWeather ? " weather-hero--intense" : ""}`} aria-label={`${t.current} ${displayLocation}`}>
+          <div className={weatherAtmosphereClass} aria-hidden="true"><span className="weather-sun" />{Array.from({ length: 18 }, (_, index) => <i key={index} className="weather-particle" style={{ left: `${(index * 47) % 95 + 2}%`, top: `-${(index * 23) % 70}px`, animationDelay: `-${(index * 0.31) % 3}s` }} />)}</div>
           <div className="weather-main">
             <p className="eyebrow eyebrow--light">{t.current} {displayLocation.toUpperCase()} <span className="live-pip" /></p>
             <div className="weather-reading"><span className="weather-icon" aria-hidden="true">{condition?.icon ?? "◌"}</span><span className="temperature-value" aria-label={weather ? `${temperatureValue(weather.current.temperature, preferences.temperature_unit)} degrees` : "Loading temperature"}>{weather ? `${temperatureValue(weather.current.temperature, preferences.temperature_unit)}°` : "—°"}</span></div>
@@ -466,7 +476,7 @@ export default function WeatherApp() {
           <div className="score-details"><div className="score-track" role="meter" aria-label={t.score} aria-valuemin={0} aria-valuemax={100} aria-valuenow={weather?.survival.score ?? 0}><span style={{ width: `${weather?.survival.score ?? 0}%` }} /></div><p>{weather ? localize(weather.survival.summary, preferences.language) : t.scoreNote}</p><details><summary>{t.whyScore}</summary><p className="score-disclaimer">{weather?.survival.disclaimer ?? t.scoreNote}</p>{weather?.survival.factors.length ? <ul>{weather.survival.factors.map((factor) => <li key={factor.label}><strong>{factor.label} −{factor.deduction}</strong><span>{factor.explanation}</span></li>)}</ul> : <p>{t.noFactors}</p>}</details></div>
         </section>
 
-        <section className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
+        <section id="daily-plan" className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
 
         <section className="outfit-section"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.outfit}</p><h2>{selectedPlan ? localize(selectedPlan.outfit_title, preferences.language) : t.loading}</h2><p className="section-description">{selectedPlan ? localize(selectedPlan.outfit_text, preferences.language) : ""}</p></div><span className="outfit-mark" aria-hidden="true">01</span></div>{selectedPlan?.tip ? <p className="outfit-tip">{localize(selectedPlan.tip, preferences.language)}</p> : null}</section>
 
@@ -477,7 +487,7 @@ export default function WeatherApp() {
 
         <PreferencesPanel key={JSON.stringify(preferences)} value={preferences} onSave={savePreferences} isSaving={isSavingPreferences || !clientId} onSaved={setStatusMessage} onError={setStatusMessage} />
 
-        <section className="capsule-section" aria-labelledby="capsules-title"><div className="capsule-heading"><div><p className="eyebrow">{t.capsules}</p><h2 id="capsules-title">{t.capsuleIntro}</h2></div><div className="capsule-input-row"><label className="visually-hidden" htmlFor="capsule-note">{t.capsulePlaceholder}</label><input id="capsule-note" value={capsuleNote} maxLength={280} onChange={(event) => setCapsuleNote(event.target.value)} placeholder={t.capsulePlaceholder} /><button onClick={() => void saveCapsule()} disabled={!weather || !clientId || isSaving}>{isSaving ? t.saving : t.saveCapsule}</button></div></div><div className="capsule-list">{capsules.length ? capsules.slice(0, 4).map((capsule) => <article className="capsule-item" key={capsule.id}><span>{capsuleDate(capsule.saved_at, preferences.language)}</span><strong>{capsule.city} · {temperatureValue(capsule.temperature, preferences.temperature_unit)}° · {localize(capsule.condition, preferences.language)}</strong><p>{localize(capsule.quest, preferences.language)}{capsule.note ? ` · “${capsule.note}”` : ""}</p><button onClick={() => void deleteCapsule(capsule.id)} aria-label={`${t.delete} ${capsule.city}`}>{t.delete}</button></article>) : <p className="capsule-empty">{t.emptyCapsules}</p>}</div></section>
+        <section id="memories" className="capsule-section" aria-labelledby="capsules-title"><div className="capsule-heading"><div><p className="eyebrow">{t.capsules}</p><h2 id="capsules-title">{t.capsuleIntro}</h2></div><div className="capsule-input-row"><label className="visually-hidden" htmlFor="capsule-note">{t.capsulePlaceholder}</label><input id="capsule-note" value={capsuleNote} maxLength={280} onChange={(event) => setCapsuleNote(event.target.value)} placeholder={t.capsulePlaceholder} /><button onClick={() => void saveCapsule()} disabled={!weather || !clientId || isSaving}>{isSaving ? t.saving : t.saveCapsule}</button></div></div><div className="capsule-list">{capsules.length ? capsules.slice(0, 4).map((capsule) => <article className="capsule-item" key={capsule.id}><span>{capsuleDate(capsule.saved_at, preferences.language)}</span><strong>{capsule.city} · {temperatureValue(capsule.temperature, preferences.temperature_unit)}° · {localize(capsule.condition, preferences.language)}</strong><p>{localize(capsule.quest, preferences.language)}{capsule.note ? ` · “${capsule.note}”` : ""}</p><button onClick={() => void deleteCapsule(capsule.id)} aria-label={`${t.delete} ${capsule.city}`}>{t.delete}</button></article>) : <p className="capsule-empty">{t.emptyCapsules}</p>}</div></section>
 
         <footer className="page-footer"><span>VÄDERVETT <span className="footer-mark">/</span> OUTSMART THE WEATHER</span><span>{t.footer} · <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">OPEN-METEO</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OPENSTREETMAP</a></span></footer>
       </div>
