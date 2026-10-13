@@ -150,6 +150,14 @@ function formatTime(date: Date, options: Intl.DateTimeFormatOptions, timezone: s
   return new Intl.DateTimeFormat(language === "sv" ? "sv-SE" : "en-GB", { ...options, timeZone: timezone }).format(date);
 }
 
+function seasonForDate(date?: string) {
+  const month = date ? Number(date.slice(5, 7)) : new Date().getMonth() + 1;
+  if ([12, 1, 2].includes(month)) return "winter";
+  if ([3, 4, 5].includes(month)) return "spring";
+  if ([6, 7, 8].includes(month)) return "summer";
+  return "autumn";
+}
+
 function windDirection(degrees: number) {
   const directions = ["N", "NÖ", "Ö", "SÖ", "S", "SV", "V", "NV"];
   return directions[Math.round(degrees / 45) % directions.length];
@@ -270,6 +278,17 @@ export default function WeatherApp() {
   const date = now ? formatTime(now, { weekday: "long", day: "numeric", month: "long" }, weather?.timezone ?? coordinates.timezone ?? "Europe/Stockholm", preferences.language) : "";
   const condition = weather?.weather;
   const weatherMood = condition?.mood.replace(/[^a-z-]/g, "") ?? "cloud";
+  const weatherCode = weather?.current.code ?? -1;
+  const isFoggy = weatherCode === 45 || weatherCode === 48;
+  const isFreezingPrecipitation = [56, 57, 66, 67].includes(weatherCode);
+  const isIntenseWeather = [55, 65, 67, 75, 82, 86, 96, 99].includes(weatherCode);
+  const weatherAtmosphereClass = [
+    "weather-atmosphere",
+    `atmosphere--${weatherMood}`,
+    isFoggy ? "atmosphere--fog" : "",
+    isFreezingPrecipitation ? "atmosphere--freezing" : "",
+    isIntenseWeather ? "atmosphere--intense" : "",
+  ].filter(Boolean).join(" ");
   const displayLocation = (weather?.city ?? coordinates.name).split(",")[0].trim();
   const selectedPlan = weather?.plans[mode] ?? weather?.plan;
   const selectedQuest = weather?.quests[mode] ?? weather?.quest;
@@ -416,8 +435,8 @@ export default function WeatherApp() {
           {cityResults.length ? <div className="city-results" role="listbox" aria-label={t.nearby}>{cityResults.map((city) => <button key={`${city.latitude}-${city.longitude}`} onClick={() => chooseLocation(city)}>{city.name}<span>{city.timezone}</span></button>)}</div> : null}
         </section>
 
-        <section className={`weather-hero editorial-hero weather-hero--${weatherMood}`} aria-label={`${t.current} ${displayLocation}`}>
-          <div className={`weather-atmosphere atmosphere--${weatherMood}`} aria-hidden="true"><span className="weather-sun" /><span className="weather-cloud" /><i className="weather-particle" /><i className="weather-particle" /><i className="weather-particle" /><i className="weather-particle" /><i className="weather-particle" /></div>
+        <section className={`weather-hero editorial-hero weather-hero--${weatherMood} weather-season--${seasonForDate(weather?.date)}${isIntenseWeather ? " weather-hero--intense" : ""}`} aria-label={`${t.current} ${displayLocation}`}>
+          <div className={weatherAtmosphereClass} aria-hidden="true"><span className="weather-sun" /><span className="weather-cloud" />{Array.from({ length: 18 }, (_, index) => <i key={index} className="weather-particle" style={{ left: `${(index * 47) % 95 + 2}%`, top: `-${(index * 23) % 70}px`, animationDelay: `-${(index * 0.31) % 3}s` }} />)}</div>
           <div className="weather-main">
             <p className="eyebrow eyebrow--light">{t.current} {displayLocation.toUpperCase()} <span className="live-pip" /></p>
             <div className="weather-reading"><span className="weather-icon" aria-hidden="true">{condition?.icon ?? "◌"}</span><span className="temperature-value" aria-label={weather ? `${temperatureValue(weather.current.temperature, preferences.temperature_unit)} degrees` : "Loading temperature"}>{weather ? `${temperatureValue(weather.current.temperature, preferences.temperature_unit)}°` : "—°"}</span></div>
