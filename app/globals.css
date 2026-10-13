@@ -117,7 +117,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-season--winter { --weather-glow-a: rgb(162 208 230 / 48%); --weather-glow-b: rgb(220 231 237 / 40%); --landscape-far: rgb(188 216 228 / 64%); --landscape-near: rgb(92 127 145 / 78%); }
 .weather-hero::before {
   position: absolute; inset: 0; content: ""; pointer-events: none;
-  background: linear-gradient(90deg, rgb(14 31 42 / 38%), transparent 73%), radial-gradient(ellipse at 84% 19%, color-mix(in srgb, var(--weather-light) 28%, transparent), transparent 34%);
+  background: linear-gradient(90deg, rgb(14 31 42 / 38%), transparent 73%), radial-gradient(ellipse at 84% 19%, color-mix(in srgb, var(--weather-light) 28%, transparent), transparent 34%), linear-gradient(to top, color-mix(in srgb, var(--landscape-near) 72%, transparent), color-mix(in srgb, var(--landscape-far) 42%, transparent) 24%, transparent 62%);
 }
 .weather-hero::after {
   position: absolute; z-index: 0; inset: -24%; content: ""; pointer-events: none; opacity: .95;
