@@ -96,7 +96,7 @@ export default function PreferencesPanel({
   };
 
   return (
-    <details className="preferences-panel">
+    <details id="settings" className="preferences-panel">
       <summary><span>{t.title}</span><span className="preferences-summary-icon" aria-hidden="true">＋</span></summary>
       <form className="preferences-form" onSubmit={submit}>
         <p className="preferences-description">{t.description}</p>

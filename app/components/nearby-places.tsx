@@ -147,7 +147,7 @@ export default function NearbyPlaces({
   ];
 
   return (
-    <section className="places-section" aria-labelledby="places-title">
+    <section id="nearby-places" className="places-section" aria-labelledby="places-title">
       <div className="section-heading section-heading--editorial">
         <div>
           <p className="eyebrow">{text.eyebrow}</p>

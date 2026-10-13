@@ -51,7 +51,7 @@ export default function HourlyForecast({
 }) {
   const text = copy[language];
   return (
-    <section className="forecast-section" aria-labelledby="forecast-title">
+    <section id="forecast-section" className="forecast-section" aria-labelledby="forecast-title">
       <div className="section-heading section-heading--editorial">
         <div>
           <p className="eyebrow">{text.eyebrow}</p>
