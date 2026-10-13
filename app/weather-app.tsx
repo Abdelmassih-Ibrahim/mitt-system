@@ -424,6 +424,16 @@ export default function WeatherApp() {
             <h2 className="weather-description">{condition ? localize(condition.label, preferences.language) : (preferences.language === "sv" ? "Hämtar vädret" : "Getting the weather")}</h2>
             <p className="weather-feels">{weather ? `${t.feels} ${temperatureValue(weather.current.feels_like, preferences.temperature_unit)}°` : t.loading}{weather && weather.temperature_min !== null && weather.temperature_max !== null ? ` · ${temperatureValue(weather.temperature_min, preferences.temperature_unit)}° / ${temperatureValue(weather.temperature_max, preferences.temperature_unit)}°` : ""}</p>
             <div className="weather-stats"><div><small>{t.wind}</small><strong>{weather ? `${Math.round(weather.current.wind_speed)} km/h ${windDirection(weather.current.wind_direction)}` : "—"}</strong></div><div><small>{t.humidity}</small><strong>{weather ? `${weather.current.humidity}%` : "—"}</strong></div><div><small>{t.sunrise}</small><strong>{weather?.sunrise ?? "—"}</strong></div><div><small>{t.sunset}</small><strong>{weather?.sunset ?? "—"}</strong></div></div>
+            {weather?.highlights?.length ? (
+              <div className="weather-highlights" aria-label={preferences.language === "sv" ? "Väderinsikter" : "Weather insights"}>
+                {weather.highlights.map((highlight, index) => (
+                  <div key={`${highlight}-${index}`} className="highlight-card">
+                    <span aria-hidden="true">✦</span>
+                    <p>{highlight}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="weather-hero-side"><aside className="daylight-panel"><p className="eyebrow">{preferences.language === "sv" ? "DAGENS LJUS" : "TODAY'S LIGHT"}</p><div className="daylight-times"><span><small>{t.sunrise}</small><strong>{weather?.sunrise ?? "—"}</strong></span><i aria-hidden="true" /><span><small>{t.sunset}</small><strong>{weather?.sunset ?? "—"}</strong></span></div><p>{weather?.outdoor_window.available ? `${weather.outdoor_window.start}–${weather.outdoor_window.end} · ${preferences.language === "sv" ? "promenadlucka" : "walk window"}` : (preferences.language === "sv" ? "Ta vara på ljuset" : "Make the most of the light")}</p></aside><div className="weather-source"><span>{isRefreshing ? t.loading : `${t.status} ${lastUpdated ? formatTime(lastUpdated, { hour: "2-digit", minute: "2-digit" }, weather?.timezone ?? "Europe/Stockholm", preferences.language) : ""}`}</span><button className="refresh-button" onClick={() => setRefreshToken((value) => value + 1)} disabled={isRefreshing}>{t.refresh} ↻</button></div></div>
         </section>

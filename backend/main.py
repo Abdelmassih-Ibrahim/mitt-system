@@ -133,6 +133,7 @@ class WeatherPayload(BaseModel):
     temperature_max: float | None
     refreshed_at: str
     headline: str
+    highlights: list[str] = Field(default_factory=list)
     current: CurrentConditions
     weather: WeatherMood
     survival: SurvivalIndex
@@ -437,6 +438,35 @@ def build_headline(current: CurrentConditions, mood: WeatherMood, sunset: str | 
     return "Vädret bestämmer tonen. Du bestämmer dagen."
 
 
+def build_highlights(
+    current: CurrentConditions,
+    outdoor_window: OutdoorWindow,
+    hourly: list[ForecastHour],
+    language: Literal["sv", "en"] = "sv",
+) -> list[str]:
+    items: list[str] = []
+    if outdoor_window.available and outdoor_window.start and outdoor_window.end:
+        items.append(f"Bästa utetiden {outdoor_window.start}–{outdoor_window.end}")
+    if current.feels_like <= 0:
+        items.append("Kylan gör sig påmind i vinden.")
+    elif current.feels_like >= 18:
+        items.append("Det känns behagligt ute just nu.")
+    if current.wind_speed >= 25:
+        items.append("Vind gör det kallare än termometern visar.")
+    elif current.precipitation > 0 or any(
+        (hour.precipitation_probability is not None and hour.precipitation_probability >= 40)
+        for hour in hourly[:6]
+    ):
+        items.append("Regn riskerar att slå till under de närmaste timmarna.")
+    if not items:
+        items.append("Det ser ganska balanserat ut just nu.")
+    if len(items) > 3:
+        items = items[:3]
+    if language == "en":
+        return list(translate_payload(items))
+    return items
+
+
 def build_outdoor_window(
     hourly: list[ForecastHour], forecast_date: str, sunrise: str | None, sunset: str | None
 ) -> OutdoorWindow:
@@ -509,6 +539,7 @@ def build_payload(
     city: str,
     mode: WeatherMode,
     thermal_sensitivity: Literal["cold", "neutral", "warm"] = "neutral",
+    language: Literal["sv", "en"] = "sv",
 ) -> WeatherPayload:
     raw = data["current"]
     current = CurrentConditions(
@@ -557,6 +588,7 @@ def build_payload(
     daily = data.get("daily", {})
     max_temps = daily.get("temperature_2m_max", [])
     min_temps = daily.get("temperature_2m_min", [])
+    outdoor_window = build_outdoor_window(hourly_values, local_date, sunrise, sunset)
     plans = {
         key: build_plan(current, key, thermal_sensitivity)
         for key in ("outdoor", "indoor", "surprise")
@@ -573,6 +605,7 @@ def build_payload(
         temperature_max=max_temps[0] if max_temps else None,
         refreshed_at=datetime.now(UTC).isoformat(),
         headline=build_headline(current, mood, sunset),
+        highlights=build_highlights(current, outdoor_window, hourly_values, language),
         current=current,
         weather=mood,
         survival=calculate_survival(current),
@@ -582,7 +615,7 @@ def build_payload(
         quests=quests,
         dj=build_dj(current),
         hourly=hourly_values,
-        outdoor_window=build_outdoor_window(hourly_values, local_date, sunrise, sunset),
+        outdoor_window=outdoor_window,
     )
 
 
@@ -627,7 +660,7 @@ async def get_weather(
             response = await client.get(WEATHER_URL, params=params)
             response.raise_for_status()
             data = response.json()
-        payload = build_payload(data, city, mode, thermal_sensitivity)
+        payload = build_payload(data, city, mode, thermal_sensitivity, language)
         if language == "en":
             return WeatherPayload.model_validate(translate_payload(payload.model_dump()))
         return payload

@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from backend.main import (
     app,
     build_dj,
+    build_highlights,
     build_plan,
     build_quest,
     build_payload,
@@ -111,6 +112,47 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertTrue(payload.outdoor_window.available)
         self.assertEqual(payload.outdoor_window.start, "16:00")
         self.assertEqual(payload.outdoor_window.end, "17:00")
+
+    def test_payload_builds_actionable_highlights(self) -> None:
+        data = {
+            "timezone": "Europe/Stockholm",
+            "current": {
+                "time": "2026-10-12T14:30",
+                "temperature_2m": 2,
+                "apparent_temperature": -2,
+                "relative_humidity_2m": 80,
+                "precipitation": 0.4,
+                "weather_code": 63,
+                "wind_speed_10m": 34,
+                "wind_direction_10m": 210,
+                "is_day": 1,
+            },
+            "hourly": {
+                "time": [
+                    "2026-10-12T14:00",
+                    "2026-10-12T15:00",
+                    "2026-10-12T16:00",
+                    "2026-10-13T09:00",
+                ],
+                "temperature_2m": [2, 3, 4, 5],
+                "apparent_temperature": [-2, -1, 0, 3],
+                "precipitation_probability": [35, 20, 10, 0],
+                "weather_code": [63, 3, 1, 0],
+                "wind_speed_10m": [34, 22, 12, 8],
+                "is_day": [1, 1, 1, 1],
+            },
+            "daily": {
+                "time": ["2026-10-12"],
+                "sunrise": ["2026-10-12T07:30"],
+                "sunset": ["2026-10-12T17:49"],
+            },
+        }
+
+        payload = build_payload(data, "Stockholm", "outdoor")
+        self.assertTrue(payload.highlights)
+        self.assertTrue(any("Bästa utetiden" in item for item in payload.highlights))
+        self.assertTrue(any("Kylan" in item or "Vind" in item for item in payload.highlights))
+        self.assertEqual(build_highlights(payload.current, payload.outdoor_window, payload.hourly, "sv")[0].startswith("Bästa utetiden"), True)
 
     def test_plan_mode_changes_activity(self) -> None:
         current = CurrentConditions(

@@ -139,6 +139,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .weather-stats > div { min-width: 70px; display: grid; gap: 4px; }
 .weather-stats small { color: #d8e3e2; font-size: 8px; font-weight: 750; letter-spacing: .11em; }
 .weather-stats strong { color: #fffdf7; font-size: 11px; font-weight: 600; }
+.weather-highlights { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.highlight-card {
+  min-height: 72px; padding: 10px 11px; display: flex; align-items: flex-start; gap: 8px;
+  border: 1px solid rgb(255 255 255 / 28%); background: rgb(255 255 255 / 8%); backdrop-filter: blur(2px);
+}
+.highlight-card span { color: #f2d98a; font-size: 12px; }
+.highlight-card p { margin: 0; color: #f2f5f1; font-size: 9px; line-height: 1.5; }
 .weather-hero-side { display: grid; justify-items: end; gap: 13px; }
 .daylight-panel { width: min(100%, 294px); padding: 21px 23px; border: 1px solid rgb(255 255 255 / 42%); background: rgb(247 246 241 / 94%); color: var(--ink); }
 .daylight-panel .eyebrow { margin-bottom: 19px; color: var(--blue); }
