@@ -450,6 +450,8 @@ export default function WeatherApp() {
       </nav>
 
       <div className="page-content" id="top">
+        {activeView === "today" ? (
+          <div className="view-panel view-panel--today">
         <section className="page-intro">
           <p className="eyebrow">{t.tagline}</p>
           <div className="intro-heading-row"><h1>{heroHeadline}</h1><time className="intro-clock" aria-label={`${date} ${localTime}`}><span>{localTime}</span><small>{seconds}</small><span className="intro-clock-date">{date}</span></time></div>
@@ -479,25 +481,35 @@ export default function WeatherApp() {
           </div>
           <div className="weather-hero-side"><aside className="daylight-panel"><p className="eyebrow">{preferences.language === "sv" ? "DAGENS LJUS" : "TODAY'S LIGHT"}</p><div className="daylight-times"><span><small>{t.sunrise}</small><strong>{weather?.sunrise ?? "—"}</strong></span><i aria-hidden="true" /><span><small>{t.sunset}</small><strong>{weather?.sunset ?? "—"}</strong></span></div><p>{weather?.outdoor_window.available ? `${weather.outdoor_window.start}–${weather.outdoor_window.end} · ${preferences.language === "sv" ? "promenadlucka" : "walk window"}` : (preferences.language === "sv" ? "Ta vara på ljuset" : "Make the most of the light")}</p></aside><div className="weather-source"><span>{isRefreshing ? t.loading : `${t.status} ${lastUpdated ? formatTime(lastUpdated, { hour: "2-digit", minute: "2-digit" }, weather?.timezone ?? "Europe/Stockholm", preferences.language) : ""}`}</span><button className="refresh-button" onClick={() => setRefreshToken((value) => value + 1)} disabled={isRefreshing}>{t.refresh} ↻</button></div></div>
         </section>
-        {statusMessage ? <p className="status-message" role="status">{statusMessage}</p> : null}
-
         <section className="score-section" aria-labelledby="score-title">
           <div className="score-number-block"><p className="eyebrow">{t.score}</p><div><strong>{weather?.survival.score ?? "—"}</strong><span>/100</span></div><p>{weather ? localize(weather.survival.level, preferences.language) : t.loading}</p></div>
           <div className="score-details"><div className="score-track" role="meter" aria-label={t.score} aria-valuemin={0} aria-valuemax={100} aria-valuenow={weather?.survival.score ?? 0}><span style={{ width: `${weather?.survival.score ?? 0}%` }} /></div><p>{weather ? localize(weather.survival.summary, preferences.language) : t.scoreNote}</p><details><summary>{t.whyScore}</summary><p className="score-disclaimer">{weather?.survival.disclaimer ?? t.scoreNote}</p>{weather?.survival.factors.length ? <ul>{weather.survival.factors.map((factor) => <li key={factor.label}><strong>{factor.label} −{factor.deduction}</strong><span>{factor.explanation}</span></li>)}</ul> : <p>{t.noFactors}</p>}</details></div>
         </section>
+          </div>
+        ) : null}
 
+        {activeView === "plan" ? (
+          <div className="view-panel view-panel--plan">
         <section id="daily-plan" className="mode-section" aria-labelledby="mode-title"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="mode-title">{t.modeTitle}</h2></div><div className="mode-switch" role="group" aria-label={t.modeTitle}>{(["outdoor", "indoor", "surprise"] as const).map((item) => <button key={item} className={mode === item ? "is-active" : ""} onClick={() => chooseMode(item)} aria-pressed={mode === item}>{t.modes[item]}</button>)}</div></section>
 
         <section className="outfit-section"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.outfit}</p><h2>{selectedPlan ? localize(selectedPlan.outfit_title, preferences.language) : t.loading}</h2><p className="section-description">{selectedPlan ? localize(selectedPlan.outfit_text, preferences.language) : ""}</p></div><span className="outfit-mark" aria-hidden="true">01</span></div>{selectedPlan?.tip ? <p className="outfit-tip">{localize(selectedPlan.tip, preferences.language)}</p> : null}</section>
 
         <section className="plan-section" aria-labelledby="plan-title"><div className="section-heading section-heading--editorial"><div><p className="eyebrow">{t.activityLabel}</p><h2 id="plan-title">{t.activityTitle}</h2></div><p className="section-aside">{t.selected}: {t.modes[mode]}</p></div><div className="plan-grid plan-grid--editorial"><article className="plan-card"><span className="card-label">02 / {t.outdoor}</span><h3>{localize(weather?.plans.outdoor.activity_title ?? "", preferences.language) || "—"}</h3><p>{localize(weather?.plans.outdoor.activity_text ?? "", preferences.language)}</p><p className="card-reason">{weather?.outdoor_window.available ? `${weather.outdoor_window.start}–${weather.outdoor_window.end}` : (preferences.language === "sv" ? "Ingen säker väderlucka utlovas" : "No suitable weather window promised")}</p></article><article className="plan-card"><span className="card-label">03 / {t.indoor}</span><h3>{localize(weather?.plans.indoor.activity_title ?? "", preferences.language) || "—"}</h3><p>{localize(weather?.plans.indoor.activity_text ?? "", preferences.language)}</p><p className="card-reason">{selectedPlan ? localize(selectedPlan.cafe_text, preferences.language) : ""}</p></article><article className="plan-card plan-card--accent"><span className="card-label">04 / {t.adventure}</span><h3>{localize(selectedQuest?.title ?? "", preferences.language) || "—"}</h3><p>{localize(selectedQuest?.description ?? "", preferences.language)}</p><p className="card-reason">{selectedQuest?.reward}</p></article></div></section>
+          </div>
+        ) : null}
 
-        {weather ? <HourlyForecast hours={weather.hourly} window={weather.outdoor_window} language={preferences.language} unit={preferences.temperature_unit} /> : null}
-        <NearbyPlaces coordinates={coordinates} weather={weather} radius={preferences.walking_distance_meters} language={preferences.language} budget={preferences.budget} interests={preferences.interests} />
+        {activeView === "forecast" ? <div className="view-panel view-panel--forecast">{weather ? <HourlyForecast hours={weather.hourly} window={weather.outdoor_window} language={preferences.language} unit={preferences.temperature_unit} /> : <p className="forecast-empty">{t.loading}</p>}</div> : null}
+        {activeView === "places" ? <div className="view-panel view-panel--places"><NearbyPlaces coordinates={coordinates} weather={weather} radius={preferences.walking_distance_meters} language={preferences.language} budget={preferences.budget} interests={preferences.interests} /></div> : null}
 
+        {activeView === "saved" ? (
+          <div className="view-panel view-panel--saved">
         <PreferencesPanel key={JSON.stringify(preferences)} value={preferences} onSave={savePreferences} isSaving={isSavingPreferences || !clientId} onSaved={setStatusMessage} onError={setStatusMessage} />
 
         <section id="memories" className="capsule-section" aria-labelledby="capsules-title"><div className="capsule-heading"><div><p className="eyebrow">{t.capsules}</p><h2 id="capsules-title">{t.capsuleIntro}</h2></div><div className="capsule-input-row"><label className="visually-hidden" htmlFor="capsule-note">{t.capsulePlaceholder}</label><input id="capsule-note" value={capsuleNote} maxLength={280} onChange={(event) => setCapsuleNote(event.target.value)} placeholder={t.capsulePlaceholder} /><button onClick={() => void saveCapsule()} disabled={!weather || !clientId || isSaving}>{isSaving ? t.saving : t.saveCapsule}</button></div></div><div className="capsule-list">{capsules.length ? capsules.slice(0, 4).map((capsule) => <article className="capsule-item" key={capsule.id}><span>{capsuleDate(capsule.saved_at, preferences.language)}</span><strong>{capsule.city} · {temperatureValue(capsule.temperature, preferences.temperature_unit)}° · {localize(capsule.condition, preferences.language)}</strong><p>{localize(capsule.quest, preferences.language)}{capsule.note ? ` · “${capsule.note}”` : ""}</p><button onClick={() => void deleteCapsule(capsule.id)} aria-label={`${t.delete} ${capsule.city}`}>{t.delete}</button></article>) : <p className="capsule-empty">{t.emptyCapsules}</p>}</div></section>
+          </div>
+        ) : null}
+
+        {statusMessage ? <p className="status-message" role="status">{statusMessage}</p> : null}
 
         <footer className="page-footer"><span>VÄDERVETT <span className="footer-mark">/</span> OUTSMART THE WEATHER</span><span>{t.footer} · <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">OPEN-METEO</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OPENSTREETMAP</a></span></footer>
       </div>
