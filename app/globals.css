@@ -104,7 +104,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   animation: enter 500ms ease-out both;
 }
 .weather-hero--rain { --weather-tone: #52798d; --weather-light: #e4eef0; --weather-glow-a: rgb(137 208 211 / 35%); --weather-glow-b: rgb(95 151 188 / 34%); }
-.weather-hero--cloud { --weather-tone: #72818a; --weather-light: #e7ebeb; --weather-glow-a: rgb(111 201 196 / 58%); --weather-glow-b: rgb(226 151 116 / 44%); }
+.weather-hero--cloud { --weather-tone: #72818a; --weather-light: #e7ebeb; --weather-glow-a: rgb(32 177 170 / 75%); --weather-glow-b: rgb(220 125 90 / 58%); }
 .weather-hero--snow { --weather-tone: #8babb6; --weather-light: #f1f5f3; --weather-glow-a: rgb(214 245 243 / 42%); --weather-glow-b: rgb(173 215 231 / 30%); }
 .weather-hero--clear { --weather-tone: #9a895b; --weather-light: #f5ebc9; --weather-glow-a: rgb(255 218 131 / 50%); --weather-glow-b: rgb(249 142 101 / 28%); }
 .weather-hero--night, .weather-hero--night-cloud { --weather-tone: #384a5e; --weather-light: #e2e5ed; --weather-glow-a: rgb(119 166 201 / 30%); --weather-glow-b: rgb(152 174 203 / 22%); }
@@ -115,8 +115,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .weather-hero::after {
   position: absolute; z-index: 0; inset: -24%; content: ""; pointer-events: none; opacity: .95;
-  background: radial-gradient(ellipse at 74% 22%, var(--weather-glow-a), transparent 32%), radial-gradient(ellipse at 88% 78%, var(--weather-glow-b), transparent 34%);
-  filter: blur(22px); animation: weather-glow-drift 18s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse at 67% 28%, var(--weather-glow-a), transparent 32%), radial-gradient(ellipse at 96% 14%, var(--weather-glow-b), transparent 34%);
+  filter: blur(18px) saturate(1.35); animation: weather-glow-drift 18s ease-in-out infinite alternate;
 }
 .weather-atmosphere { position: absolute; z-index: 1; inset: 0; overflow: hidden; pointer-events: none; }
 .weather-sun, .weather-cloud { position: absolute; display: none; }
