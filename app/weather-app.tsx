@@ -279,12 +279,14 @@ export default function WeatherApp() {
   const condition = weather?.weather;
   const weatherMood = condition?.mood.replace(/[^a-z-]/g, "") ?? "cloud";
   const weatherCode = weather?.current.code ?? -1;
+  const hasSunBreaks = weatherCode === 2;
   const isFoggy = weatherCode === 45 || weatherCode === 48;
   const isFreezingPrecipitation = [56, 57, 66, 67].includes(weatherCode);
   const isIntenseWeather = [55, 65, 67, 75, 82, 86, 96, 99].includes(weatherCode);
   const weatherAtmosphereClass = [
     "weather-atmosphere",
     `atmosphere--${weatherMood}`,
+    hasSunBreaks ? "atmosphere--sun-breaks" : "",
     isFoggy ? "atmosphere--fog" : "",
     isFreezingPrecipitation ? "atmosphere--freezing" : "",
     isIntenseWeather ? "atmosphere--intense" : "",
