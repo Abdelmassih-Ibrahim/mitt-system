@@ -52,6 +52,7 @@ export type WeatherPayload = {
   temperature_max: number | null;
   refreshed_at: string;
   headline: string;
+  highlights: string[];
   current: {
     temperature: number;
     feels_like: number;
