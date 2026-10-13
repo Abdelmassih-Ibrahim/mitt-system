@@ -438,6 +438,7 @@ export default function WeatherApp() {
         </section>
 
         <section className={`weather-hero editorial-hero weather-hero--${weatherMood} weather-season--${seasonForDate(weather?.date)}${isIntenseWeather ? " weather-hero--intense" : ""}`} aria-label={`${t.current} ${displayLocation}`}>
+          <div className="weather-landscape" aria-hidden="true"><span className="weather-season-particles" /></div>
           <div className={weatherAtmosphereClass} aria-hidden="true"><span className="weather-sun" /><span className="weather-cloud" />{Array.from({ length: 18 }, (_, index) => <i key={index} className="weather-particle" style={{ left: `${(index * 47) % 95 + 2}%`, top: `-${(index * 23) % 70}px`, animationDelay: `-${(index * 0.31) % 3}s` }} />)}</div>
           <div className="weather-main">
             <p className="eyebrow eyebrow--light">{t.current} {displayLocation.toUpperCase()} <span className="live-pip" /></p>
