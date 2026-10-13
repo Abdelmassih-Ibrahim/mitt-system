@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import math
+import re
 import time
+import unicodedata
 from typing import Literal
 from urllib.parse import quote
 
@@ -69,14 +71,30 @@ _place_cache: dict[tuple[object, ...], tuple[float, PlaceSearchResult]] = {}
 _commons_image_cache: dict[tuple[float, float], tuple[float, tuple[str, str] | None]] = {}
 
 
-def commons_image_from_response(data: dict) -> tuple[str, str] | None:
+def _normalized_commons_text(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value.casefold())
+    without_marks = "".join(character for character in decomposed if not unicodedata.combining(character))
+    return " ".join(re.findall(r"[a-z0-9]+", without_marks))
+
+
+def commons_image_from_response(data: dict, place_name: str) -> tuple[str, str] | None:
+    normalized_name = _normalized_commons_text(place_name)
+    if normalized_name in {"park", "stadsparken", "museum", "bibliotek", "library", "cafe", "kafe"}:
+        return None
+
     pages = data.get("query", {}).get("pages", {})
     ordered_pages = sorted(pages.values(), key=lambda page: page.get("index", 0))
     for page in ordered_pages:
+        normalized_title = _normalized_commons_text(page.get("title", "").removeprefix("File:"))
+        if normalized_name not in normalized_title:
+            continue
         image_info = page.get("imageinfo", [])
         if not image_info:
             continue
         info = image_info[0]
+        mime_type = info.get("mime", "")
+        if mime_type and not mime_type.startswith("image/"):
+            continue
         image_url = info.get("thumburl") or info.get("url")
         source_url = info.get("descriptionurl")
         if image_url and source_url:
@@ -101,19 +119,18 @@ async def _find_commons_image(client: httpx.AsyncClient, place: NearbyPlace) -> 
             "https://commons.wikimedia.org/w/api.php",
             params={
                 "action": "query",
-                "generator": "geosearch",
-                "ggscoord": f"{place.latitude}|{place.longitude}",
-                "ggsradius": 80,
-                "ggsnamespace": 6,
-                "ggslimit": 8,
+                "generator": "search",
+                "gsrsearch": f'"{place.name}"',
+                "gsrnamespace": 6,
+                "gsrlimit": 8,
                 "prop": "imageinfo",
-                "iiprop": "url",
+                "iiprop": "url|mime",
                 "iiurlwidth": 640,
                 "format": "json",
             },
         )
         response.raise_for_status()
-        image = commons_image_from_response(response.json())
+        image = commons_image_from_response(response.json(), place.name)
     except (httpx.HTTPError, ValueError, TypeError):
         pass
 
@@ -348,6 +365,10 @@ async def find_nearby_places(
         radius_meters=radius_meters,
         data_timestamp=data.get("osm3s", {}).get("timestamp_osm_base"),
     )
+    image_candidates = [place for place in result.places[:6] if not place.image_url]
+    if image_candidates:
+        async with httpx.AsyncClient(timeout=4, headers={"User-Agent": USER_AGENT}) as client:
+            await asyncio.gather(*(_find_commons_image(client, place) for place in image_candidates))
     _place_cache[cache_key] = (time.monotonic(), result)
     return result
 

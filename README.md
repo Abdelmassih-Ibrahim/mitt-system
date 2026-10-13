@@ -37,6 +37,7 @@ Testa Pythonbackendens väderregler och kapsel-API:
 
 - Aktuellt väder och timprognos hämtas från [Open-Meteo](https://open-meteo.com/). Vädret uppdateras var 15:e minut; det är prognosmodellens senaste uppgifter, inte sekundfärska observationer.
 - Ortsökning använder Open-Meteos Geocoding API. Närplatser hämtas från [OpenStreetMap](https://www.openstreetmap.org/copyright) via Overpass. Den öppna karttjänsten kan vara belastad; då visas ett återförsök i stället för påhittade platser.
+- Platsbilder används från en `wikimedia_commons`-tagg i OpenStreetMap eller från Wikimedia Commons när filnamnet matchar platsens namn. Bildsökningen cachas i backend ett dygn; foto och källsida visas bara när en träff finns. Annars visas kategorimarkören `(C)` eller `(M)`.
 - Öppettider visas endast när de finns i OpenStreetMap. De verifieras inte som “öppet nu”. Kartbidrag kan vara ofullständiga eller gamla.
 - Ingen inloggning krävs. Webbläsaren skapar ett slumpmässigt ID i `localStorage`; backend använder det för att hålla preferenser och väderminnen åtskilda mellan webbläsare. Det är inte autentisering eller molnsynkronisering.
 - SQLite-filen `backend/weather_capsules.sqlite3` innehåller lokala preferenser och sparade väderminnen. Ta en säkerhetskopia innan du flyttar installationen.

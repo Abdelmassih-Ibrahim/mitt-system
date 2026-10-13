@@ -18,7 +18,7 @@ from backend.main import (
     describe_weather,
     CurrentConditions,
 )
-from backend.places import parse_elements
+from backend.places import NearbyPlace, _find_commons_image, commons_image_from_response, parse_elements
 from backend.preferences import AppPreferences
 
 
@@ -251,6 +251,32 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertIsNone(place_without_photo.image_url)
         self.assertIsNone(place_without_photo.image_page_url)
 
+    def test_commons_search_uses_nearest_matching_photo_and_source_page(self) -> None:
+        result = commons_image_from_response(
+            {
+                "query": {
+                    "pages": {
+                        "farther": {
+                            "title": "File:Nearest museum farther.jpg",
+                            "index": 1,
+                            "imageinfo": [{"thumburl": "https://thumb.wikimedia.org/farther.jpg", "descriptionurl": "https://commons.wikimedia.org/wiki/File:Farther.jpg", "mime": "image/jpeg"}],
+                        },
+                        "nearest": {
+                            "title": "File:Nearest museum.jpg",
+                            "index": 0,
+                            "imageinfo": [{"thumburl": "https://thumb.wikimedia.org/nearest.jpg", "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nearest.jpg", "mime": "image/jpeg"}],
+                        },
+                    }
+                }
+            },
+            "Nearest museum",
+        )
+        self.assertEqual(
+            result,
+            ("https://thumb.wikimedia.org/nearest.jpg", "https://commons.wikimedia.org/wiki/File:Nearest.jpg"),
+        )
+        self.assertIsNone(commons_image_from_response({"query": {"pages": {}}}, "Nearest museum"))
+
     def test_nearby_places_apply_interest_and_known_fee_preferences(self) -> None:
         places = parse_elements(
             [
@@ -286,6 +312,50 @@ class WeatherLogicTests(unittest.TestCase):
             budget="flexible",
         )
         self.assertEqual(fitness_places[0].category, "Träning")
+
+
+class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
+    async def test_geosearch_adds_nearby_photo_and_source_link(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return {
+                    "query": {
+                        "pages": {
+                            "123": {
+                                "title": "File:Lilla parken photo.jpg",
+                                "index": 0,
+                                "imageinfo": [{
+                                    "thumburl": "https://thumb.wikimedia.org/nearby.jpg",
+                                    "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nearby.jpg",
+                                    "mime": "image/jpeg",
+                                }],
+                            }
+                        }
+                    }
+                }
+
+        class FakeClient:
+            async def get(self, url: str, params: dict) -> FakeResponse:
+                self.params = params
+                return FakeResponse()
+
+        place = NearbyPlace(
+            osm_type="node", osm_id=9812, name="Lilla parken", category="Park",
+            latitude=60.01234, longitude=18.05678, distance_meters=50,
+            address=None, opening_hours=None, fee=None,
+            map_url="https://www.openstreetmap.org/node/9812",
+            directions_url="https://www.openstreetmap.org/directions",
+            reason="En park nära dig.",
+        )
+        client = FakeClient()
+        await _find_commons_image(client, place)
+
+        self.assertEqual(place.image_url, "https://thumb.wikimedia.org/nearby.jpg")
+        self.assertEqual(place.image_page_url, "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
+        self.assertEqual(client.params["gsrsearch"], '"Lilla parken"')
 
 
 class CapsuleApiTests(unittest.TestCase):

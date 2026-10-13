@@ -179,7 +179,7 @@ export default function NearbyPlaces({
                 aria-label={place.image_url ? `${place.name}, Wikimedia Commons photo` : `${place.category}: ${place.name}`}
                 style={place.image_url ? { backgroundImage: `url("${place.image_url}")` } : undefined}
               >
-                {!place.image_url ? <span aria-hidden="true">{place.category === "Kafé" ? "C" : "M"}</span> : null}
+                <span className="place-photo-mark" aria-hidden="true">({place.category === "Kafé" ? "C" : "M"})</span>
               </div>
               <div className="place-copy">
                 <div className="place-name-line"><h3>{place.name}</h3><span>{formatDistance(place.distance_meters, language)}</span></div>

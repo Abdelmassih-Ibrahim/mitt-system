@@ -277,9 +277,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .place-filters button.is-active { border-color: var(--blue-deep); background: var(--blue-deep); color: white; }
 .places-list { border-top: 1px solid var(--line); }
 .place-row { padding: 14px 0; display: grid; grid-template-columns: 116px minmax(0,1fr) auto; gap: 15px; align-items: start; border-bottom: 1px solid var(--line); }
-.place-photo { width: 116px; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 3px; background-color: #e6e9e3; background-position: center; background-size: cover; }
+.place-photo { position: relative; width: 116px; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 3px; background-color: #e6e9e3; background-position: center; background-size: cover; }
 .place-photo--placeholder { display: grid; place-items: center; background: linear-gradient(145deg, #dce8e2, #b6c9c7 56%, #e9dfcb); }
-.place-photo--placeholder span { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgb(32 59 80 / 45%); border-radius: 50%; color: var(--blue-deep); font-family: var(--font-display); font-size: 16px; }
+.place-photo-mark { position: absolute; top: 6px; left: 6px; padding: 3px 5px; border: 1px solid rgb(255 255 255 / 55%); border-radius: 2px; background: rgb(247 246 241 / 90%); color: var(--blue-deep); font-size: 9px; font-weight: 750; line-height: 1; }
 .place-copy { min-width: 0; }
 .place-name-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px 12px; }
 .place-name-line h3 { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 18px; font-weight: 400; }
