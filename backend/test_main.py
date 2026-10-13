@@ -238,6 +238,19 @@ class WeatherLogicTests(unittest.TestCase):
         self.assertIn("openstreetmap.org/directions", places[0].directions_url)
         self.assertIn("tak", places[0].reason)
 
+        place_without_photo = parse_elements(
+            [{"type": "node", "id": 321, "lat": 59.3294, "lon": 18.0686, "tags": {"name": "Utan bild", "amenity": "cafe"}}],
+            59.3293,
+            18.0686,
+            1000,
+            1,
+            0,
+            5,
+            10,
+        )[0]
+        self.assertIsNone(place_without_photo.image_url)
+        self.assertIsNone(place_without_photo.image_page_url)
+
     def test_nearby_places_apply_interest_and_known_fee_preferences(self) -> None:
         places = parse_elements(
             [
