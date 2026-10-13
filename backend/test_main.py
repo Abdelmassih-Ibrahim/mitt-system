@@ -17,6 +17,7 @@ from backend.main import (
     calculate_survival,
     describe_weather,
     CurrentConditions,
+    allowed_frontend_origins,
 )
 from backend.places import NearbyPlace, _find_commons_image, commons_image_from_response, parse_elements
 from backend.preferences import AppPreferences
@@ -359,6 +360,11 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
 
 
 class CapsuleApiTests(unittest.TestCase):
+    def test_lan_frontend_origin_can_be_allowed(self) -> None:
+        origin = "http://192.168.10.170:3000"
+        with patch.dict("os.environ", {"WEATHER_ALLOWED_ORIGINS": origin}):
+            self.assertIn(origin, allowed_frontend_origins())
+
     def test_preferences_are_saved_and_returned(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             database = Path(temp_dir) / "preferences.sqlite3"

@@ -6,7 +6,7 @@ import NearbyPlaces from "./components/nearby-places";
 import PreferencesPanel from "./components/preferences-panel";
 import type { Capsule, Coordinates, Language, Mode, Preferences, WeatherPayload } from "./weather-types";
 
-const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? "http://127.0.0.1:8000";
+const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? (typeof window === "undefined" ? "http://127.0.0.1:8000" : `${window.location.protocol}//${window.location.hostname}:8000`);
 const STOCKHOLM: Coordinates = { latitude: 59.3293, longitude: 18.0686, name: "Stockholm", timezone: "Europe/Stockholm" };
 const DEFAULT_PREFERENCES: Preferences = {
   location_name: "Stockholm", latitude: 59.3293, longitude: 18.0686, timezone: "Europe/Stockholm",
@@ -441,7 +441,13 @@ export default function WeatherApp() {
 
       <nav className="section-nav" aria-label={t.navigation.label}>
         {navigationItems.map((item) => (
-          <button key={item.id} type="button" aria-current={activeView === item.id ? "page" : undefined} onClick={() => setActiveView(item.id)}>
+          <button
+            key={item.id}
+            type="button"
+            aria-pressed={activeView === item.id}
+            onPointerUp={(event) => { if (event.pointerType === "touch") setActiveView(item.id); }}
+            onClick={() => setActiveView(item.id)}
+          >
             {item.label}
           </button>
         ))}

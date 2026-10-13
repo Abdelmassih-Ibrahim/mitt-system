@@ -52,7 +52,7 @@ button { color: inherit; }
 .section-nav button {
   min-height: 49px; padding: 0 14px; display: inline-flex; flex: 0 0 auto; align-items: center;
   border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-soft);
-  font-size: 12px; font-weight: 650; white-space: nowrap; cursor: pointer;
+  font-size: 12px; font-weight: 650; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none;
 }
 .section-nav button:hover { color: var(--blue-deep); }
 .section-nav button[aria-current="page"] { border-bottom-color: var(--coral); color: var(--blue-deep); }

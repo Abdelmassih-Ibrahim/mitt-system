@@ -203,9 +203,22 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+def allowed_frontend_origins() -> list[str]:
+    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    configured_origins = os.environ.get("WEATHER_ALLOWED_ORIGINS", "")
+    origins.extend(
+        origin.strip()
+        for origin in configured_origins.split(",")
+        if origin.strip() and origin.strip() not in origins
+    )
+    return origins
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=allowed_frontend_origins(),
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "X-Client-ID"],

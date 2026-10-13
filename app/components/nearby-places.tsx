@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Coordinates, Language, NearbyPlace, PlaceCategory, WeatherPayload } from "../weather-types";
 
-const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? "http://127.0.0.1:8000";
+const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? (typeof window === "undefined" ? "http://127.0.0.1:8000" : `${window.location.protocol}//${window.location.hostname}:8000`);
 const copy = {
   sv: {
     eyebrow: "NÄRA DIG, PÅ RIKTIGT",

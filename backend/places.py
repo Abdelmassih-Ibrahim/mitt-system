@@ -68,7 +68,7 @@ class CityResult(BaseModel):
 
 
 _place_cache: dict[tuple[object, ...], tuple[float, PlaceSearchResult]] = {}
-_commons_image_cache: dict[tuple[float, float], tuple[float, tuple[str, str] | None]] = {}
+_commons_image_cache: dict[tuple[str, float, float], tuple[float, tuple[str, str] | None]] = {}
 
 
 def _normalized_commons_text(value: str) -> str:
@@ -106,7 +106,7 @@ async def _find_commons_image(client: httpx.AsyncClient, place: NearbyPlace) -> 
     if place.image_url:
         return
 
-    cache_key = (round(place.latitude, 5), round(place.longitude, 5))
+    cache_key = (_normalized_commons_text(place.name), round(place.latitude, 5), round(place.longitude, 5))
     cached = _commons_image_cache.get(cache_key)
     if cached and time.monotonic() - cached[0] < COMMONS_IMAGE_CACHE_SECONDS:
         if cached[1]:

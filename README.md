@@ -27,6 +27,25 @@ npm.cmd run dev
 
 Öppna [http://localhost:3000](http://localhost:3000). API-dokumentation finns på [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
+### Öppna utvecklingssidan på en telefon
+
+`localhost` och `127.0.0.1` pekar alltid på enheten som öppnar adressen. För telefonen används därför datorns privata nätverksadress. Datorns aktuella adress är `192.168.10.170`; ersätt den om nätverket ger datorn en annan adress och anslut båda enheterna till samma Wi-Fi.
+
+Starta Python-API:t med LAN-origin tillåten:
+
+```powershell
+$env:WEATHER_ALLOWED_ORIGINS = "http://192.168.10.170:3000"
+.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Starta webbsidan i en andra terminal:
+
+```powershell
+npm.cmd run dev -- --hostname 0.0.0.0
+```
+
+Öppna sedan `http://192.168.10.170:3000` på telefonen. Om Windows-brandväggen frågar, tillåt Node och Python på det privata nätverket.
+
 Testa Pythonbackendens väderregler och kapsel-API:
 
 ```powershell
