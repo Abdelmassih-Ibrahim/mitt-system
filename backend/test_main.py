@@ -424,6 +424,9 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
         class FakeClient:
             calls = 0
 
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
             async def __aenter__(self):
                 return self
 
@@ -445,6 +448,9 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_weather_uses_recent_cache_when_provider_is_unavailable(self) -> None:
         class FakeClient:
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
             async def __aenter__(self):
                 return self
 
@@ -478,6 +484,9 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
         class FakeClient:
             calls = 0
 
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
             async def __aenter__(self):
                 return self
 
@@ -510,6 +519,9 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
 
         class FakeClient:
             image_requests = 0
+
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
 
             async def __aenter__(self):
                 return self
