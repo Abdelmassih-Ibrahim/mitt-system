@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import httpx
 from fastapi.testclient import TestClient
 
 from backend.main import (
@@ -18,8 +20,20 @@ from backend.main import (
     describe_weather,
     CurrentConditions,
     allowed_frontend_origins,
+    get_weather,
+    WEATHER_CACHE_SECONDS,
+    _weather_cache,
 )
-from backend.places import NearbyPlace, _find_commons_image, commons_image_from_response, parse_elements
+from backend.places import (
+    NearbyPlace,
+    _city_cache,
+    _find_commons_image,
+    _place_cache,
+    commons_image_from_response,
+    find_nearby_places,
+    parse_elements,
+    search_cities,
+)
 from backend.preferences import AppPreferences
 
 
@@ -357,6 +371,164 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(place.image_url, "https://thumb.wikimedia.org/nearby.jpg")
         self.assertEqual(place.image_page_url, "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
         self.assertEqual(client.params["gsrsearch"], '"Lilla parken"')
+
+
+def sample_weather_response() -> dict:
+    return {
+        "timezone": "Europe/Stockholm",
+        "current": {
+            "time": "2026-10-14T10:30",
+            "temperature_2m": 12,
+            "apparent_temperature": 11,
+            "relative_humidity_2m": 60,
+            "precipitation": 0,
+            "weather_code": 1,
+            "wind_speed_10m": 8,
+            "wind_direction_10m": 180,
+            "is_day": 1,
+        },
+        "hourly": {
+            "time": ["2026-10-14T11:00", "2026-10-14T12:00"],
+            "temperature_2m": [12, 13],
+            "apparent_temperature": [11, 12],
+            "precipitation_probability": [0, 0],
+            "weather_code": [1, 1],
+            "wind_speed_10m": [8, 8],
+            "wind_direction_10m": [180, 180],
+            "is_day": [1, 1],
+        },
+        "daily": {
+            "time": ["2026-10-14"],
+            "sunrise": ["2026-10-14T07:00"],
+            "sunset": ["2026-10-14T18:00"],
+            "temperature_2m_min": [8],
+            "temperature_2m_max": [14],
+        },
+    }
+
+
+class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        _weather_cache.clear()
+        _city_cache.clear()
+        _place_cache.clear()
+
+    async def test_weather_cache_is_shared_across_presentation_options(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return sample_weather_response()
+
+        class FakeClient:
+            calls = 0
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def get(self, *_args, **_kwargs) -> FakeResponse:
+                type(self).calls += 1
+                return FakeResponse()
+
+        with patch("backend.main.httpx.AsyncClient", FakeClient):
+            first = await get_weather(59.3293, 18.0686, "Stockholm", "outdoor")
+            second = await get_weather(59.3293, 18.0686, "Uppsala", "indoor", language="en")
+
+        self.assertEqual(FakeClient.calls, 1)
+        self.assertEqual(first.city, "Stockholm")
+        self.assertEqual(second.city, "Uppsala")
+        self.assertEqual(first.refreshed_at, second.refreshed_at)
+
+    async def test_weather_uses_recent_cache_when_provider_is_unavailable(self) -> None:
+        class FakeClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def get(self, *_args, **_kwargs):
+                raise httpx.ConnectError("offline")
+
+        cache_key = (59.329, 18.069)
+        refreshed_at = "2026-10-14T10:00:00+00:00"
+        _weather_cache[cache_key] = (
+            time.monotonic() - WEATHER_CACHE_SECONDS - 1,
+            refreshed_at,
+            sample_weather_response(),
+        )
+
+        with patch("backend.main.httpx.AsyncClient", FakeClient):
+            payload = await get_weather(59.3293, 18.0686, "Stockholm", "outdoor")
+
+        self.assertEqual(payload.refreshed_at, refreshed_at)
+
+    async def test_city_search_cache_ignores_case_and_extra_spaces(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return {"results": [{"name": "Uppsala", "latitude": 59.86, "longitude": 17.64}]}
+
+        class FakeClient:
+            calls = 0
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def get(self, *_args, **_kwargs) -> FakeResponse:
+                type(self).calls += 1
+                return FakeResponse()
+
+        with patch("backend.places.httpx.AsyncClient", FakeClient):
+            first = await search_cities("  Uppsala  ")
+            second = await search_cities("uppsala")
+
+        self.assertEqual(FakeClient.calls, 1)
+        self.assertEqual(first, second)
+
+    async def test_place_results_do_not_wait_for_optional_image_search(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return {
+                    "elements": [{
+                        "type": "node", "id": 42, "lat": 59.3294, "lon": 18.0686,
+                        "tags": {"name": "Nära kafé", "amenity": "cafe"},
+                    }]
+                }
+
+        class FakeClient:
+            image_requests = 0
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def post(self, *_args, **_kwargs) -> FakeResponse:
+                return FakeResponse()
+
+            async def get(self, *_args, **_kwargs):
+                type(self).image_requests += 1
+                raise AssertionError("Optional image search must not block place results")
+
+        with patch("backend.places.httpx.AsyncClient", FakeClient):
+            result = await find_nearby_places(59.3293, 18.0686, 1000, "all", 3, 0, 0, 10)
+
+        self.assertEqual(len(result.places), 1)
+        self.assertEqual(FakeClient.image_requests, 0)
 
 
 class CapsuleApiTests(unittest.TestCase):
