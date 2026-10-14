@@ -621,7 +621,7 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
                 return None
 
             async def get(self, url: str, params: dict) -> FakeResponse:
-                self.params = params
+                type(self).params = params
                 return FakeResponse()
 
         with (
