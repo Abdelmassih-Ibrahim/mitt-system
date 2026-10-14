@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import tempfile
 import time
 import unittest
@@ -26,6 +27,7 @@ from backend.main import (
 )
 from backend.places import (
     NearbyPlace,
+    CACHE_SECONDS,
     _city_cache,
     _find_commons_image,
     _place_cache,
@@ -519,6 +521,7 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
 
         class FakeClient:
             image_requests = 0
+            posts = 0
 
             def __init__(self, *_args, **_kwargs) -> None:
                 pass
@@ -530,6 +533,8 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
                 return None
 
             async def post(self, *_args, **_kwargs) -> FakeResponse:
+                type(self).posts += 1
+                await asyncio.sleep(0)
                 return FakeResponse()
 
             async def get(self, *_args, **_kwargs):
@@ -537,10 +542,102 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
                 raise AssertionError("Optional image search must not block place results")
 
         with patch("backend.places.httpx.AsyncClient", FakeClient):
-            result = await find_nearby_places(59.3293, 18.0686, 1000, "all", 3, 0, 0, 10)
+            result, rainy_result = await asyncio.gather(
+                find_nearby_places(59.3293, 18.0686, 1000, "all", 3, 0, 0, 10),
+                find_nearby_places(59.3293, 18.0686, 1000, "all", 63, 80, 20, 4, language="en"),
+            )
 
         self.assertEqual(len(result.places), 1)
         self.assertEqual(FakeClient.image_requests, 0)
+        self.assertEqual(FakeClient.posts, 1)
+        self.assertNotEqual(result.places[0].reason, rainy_result.places[0].reason)
+
+    async def test_places_use_recent_map_data_when_overpass_is_unavailable(self) -> None:
+        class FakeClient:
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def post(self, *_args, **_kwargs):
+                raise httpx.ConnectError("offline")
+
+        cache_key = (59.3293, 18.0686, 1000, "all")
+        _place_cache[cache_key] = (
+            time.monotonic() - CACHE_SECONDS - 1,
+            {"elements": [{
+                "type": "node", "id": 91, "lat": 59.3294, "lon": 18.0686,
+                "tags": {"name": "Sparat kafé", "amenity": "cafe"},
+            }]},
+        )
+
+        with patch("backend.places.httpx.AsyncClient", FakeClient):
+            result = await find_nearby_places(59.3293, 18.0686, 1000, "all", 63, 80, 20, 4)
+
+        self.assertTrue(result.available)
+        self.assertEqual([place.name for place in result.places], ["Sparat kafé"])
+
+    async def test_geoapify_search_uses_exact_radius_and_maps_osm_places(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return {
+                    "features": [{
+                        "type": "Feature",
+                        "properties": {
+                            "name": "Jakobsbergs kafé",
+                            "lat": 59.4229,
+                            "lon": 17.8349,
+                            "street": "Allmogeplatsen",
+                            "city": "Järfälla",
+                            "distance": 25,
+                            "datasource": {"raw": {
+                                "osm_id": 12666718336,
+                                "osm_type": "n",
+                                "amenity": "cafe",
+                                "opening_hours": "Mo-Fr 08:00-18:00",
+                            }},
+                        },
+                        "geometry": {"type": "Point", "coordinates": [17.8349, 59.4229]},
+                    }]
+                }
+
+        class FakeClient:
+            params = None
+
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def get(self, url: str, params: dict) -> FakeResponse:
+                self.params = params
+                return FakeResponse()
+
+        with (
+            patch.dict("os.environ", {"GEOAPIFY_API_KEY": "test-api-key"}),
+            patch("backend.places.httpx.AsyncClient", FakeClient),
+        ):
+            result = await find_nearby_places(
+                59.42268, 17.83508, 1500, "all", 63, 80, 20, 4, budget="flexible"
+            )
+
+        self.assertEqual(FakeClient.params["apiKey"], "test-api-key")
+        self.assertEqual(FakeClient.params["filter"], "circle:17.83508,59.42268,1500")
+        self.assertEqual(result.provider, "geoapify")
+        self.assertEqual(result.places[0].name, "Jakobsbergs kafé")
+        self.assertEqual(result.places[0].category, "Kafé")
+        self.assertIn("way", result.places[0].map_url) if result.places[0].osm_type == "way" else self.assertIn("node", result.places[0].map_url)
 
 
 class CapsuleApiTests(unittest.TestCase):

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import math
+import os
 import re
 import time
 import unicodedata
@@ -17,6 +20,7 @@ OVERPASS_URLS = (
     "https://overpass.private.coffee/api/interpreter",
     "https://overpass-api.de/api/interpreter",
 )
+GEOAPIFY_URL = "https://api.geoapify.com/v2/places"
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "Vadervett/0.1 (weather-aware local discovery)"
 CACHE_SECONDS = 600
@@ -26,11 +30,24 @@ CITY_CACHE_SECONDS = 300
 CITY_STALE_SECONDS = 3600
 CITY_CACHE_MAX_ENTRIES = 128
 COMMONS_IMAGE_CACHE_SECONDS = 86_400
+logger = logging.getLogger(__name__)
 
 CATEGORY_FILTERS: dict[PlaceCategory, str] = {
     "all": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(cafe|library|cinema|arts_centre|marketplace|gym|sports_centre)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];nwr(around:{radius},{latitude},{longitude})[name][leisure=park];',
     "cafe": 'nwr(around:{radius},{latitude},{longitude})[name][amenity=cafe];',
     "culture": 'nwr(around:{radius},{latitude},{longitude})[name][amenity~"^(library|cinema|arts_centre|marketplace)$"];nwr(around:{radius},{latitude},{longitude})[name][tourism=museum];',
+}
+GEOAPIFY_CATEGORIES: dict[PlaceCategory, tuple[str, ...]] = {
+    "all": (
+        "catering.cafe", "education.library", "entertainment.cinema",
+        "entertainment.culture", "entertainment.museum", "leisure.park",
+        "commercial.marketplace", "sport.fitness", "sport.sports_centre",
+    ),
+    "cafe": ("catering.cafe",),
+    "culture": (
+        "education.library", "entertainment.cinema", "entertainment.culture",
+        "entertainment.museum", "commercial.marketplace",
+    ),
 }
 
 
@@ -59,6 +76,8 @@ class PlaceSearchResult(BaseModel):
     message: str | None = None
     source: str = "OpenStreetMap contributors"
     source_url: str = "https://www.openstreetmap.org/copyright"
+    provider: Literal["overpass", "geoapify"] = "overpass"
+    provider_url: str | None = None
     data_timestamp: str | None = None
 
 
@@ -71,7 +90,8 @@ class CityResult(BaseModel):
     timezone: str
 
 
-_place_cache: dict[tuple[object, ...], tuple[float, PlaceSearchResult]] = {}
+_place_cache: dict[tuple[object, ...], tuple[float, dict]] = {}
+_place_inflight: dict[tuple[object, ...], asyncio.Task[dict]] = {}
 _city_cache: dict[tuple[str, str], tuple[float, list[CityResult]]] = {}
 _commons_image_cache: dict[tuple[str, float, float], tuple[float, tuple[str, str] | None]] = {}
 
@@ -317,14 +337,9 @@ async def find_nearby_places(
     interests: list[PlaceInterest] | None = None,
     budget: PlaceBudget = "free",
 ) -> PlaceSearchResult:
-    cache_key = (
-        round(latitude, 4), round(longitude, 4), radius_meters, category,
-        weather_code, precipitation_probability, round(wind_speed), round(feels_like), language,
-        tuple(interests or ()), budget,
-    )
+    cache_key = (round(latitude, 4), round(longitude, 4), radius_meters, category)
     cached = _place_cache.get(cache_key)
-    if cached and time.monotonic() - cached[0] < CACHE_SECONDS:
-        return cached[1]
+    data = cached[1] if cached and time.monotonic() - cached[0] < CACHE_SECONDS else None
 
     query = (
         "[out:json][timeout:15];("
@@ -333,34 +348,26 @@ async def find_nearby_places(
         )
         + ");out center tags;"
     )
-    data: dict | None = None
-    last_error: httpx.HTTPError | None = None
-    try:
-        async with httpx.AsyncClient(
-            timeout=httpx.Timeout(5, connect=1.5), headers={"User-Agent": USER_AGENT}
-        ) as client:
-            for endpoint in OVERPASS_URLS:
-                try:
-                    response = await client.post(
-                        endpoint,
-                        data={"data": query},
-                        headers={"Accept": "application/json"},
-                    )
-                    response.raise_for_status()
-                    data = response.json()
-                    break
-                except httpx.HTTPError as error:
-                    last_error = error
-    except httpx.HTTPError as error:
-        last_error = error
-
     if data is None:
-        stale = _place_cache.get(cache_key)
-        if stale and time.monotonic() - stale[0] < STALE_CACHE_SECONDS:
-            return stale[1]
-        if last_error:
-            raise last_error
-        raise httpx.ConnectError("No Overpass endpoint is available")
+        task = _place_inflight.get(cache_key)
+        if task is None:
+            task = asyncio.create_task(_request_place_data(query, cache_key))
+            _place_inflight[cache_key] = task
+        try:
+            data = await asyncio.shield(task)
+            _place_cache.pop(cache_key, None)
+            _place_cache[cache_key] = (time.monotonic(), data)
+            while len(_place_cache) > PLACE_CACHE_MAX_ENTRIES:
+                _place_cache.pop(next(iter(_place_cache)))
+        except httpx.HTTPError:
+            stale = _place_cache.get(cache_key)
+            if stale and time.monotonic() - stale[0] < STALE_CACHE_SECONDS:
+                data = stale[1]
+            else:
+                raise
+        finally:
+            if task.done() and _place_inflight.get(cache_key) is task:
+                _place_inflight.pop(cache_key, None)
 
     result = PlaceSearchResult(
         places=parse_elements(
@@ -377,13 +384,117 @@ async def find_nearby_places(
             budget,
         ),
         radius_meters=radius_meters,
+        provider=data.get("provider", "overpass"),
+        provider_url="https://www.geoapify.com/" if data.get("provider") == "geoapify" else None,
         data_timestamp=data.get("osm3s", {}).get("timestamp_osm_base"),
     )
-    _place_cache.pop(cache_key, None)
-    _place_cache[cache_key] = (time.monotonic(), result)
-    while len(_place_cache) > PLACE_CACHE_MAX_ENTRIES:
-        _place_cache.pop(next(iter(_place_cache)))
     return result
+
+
+async def _request_place_data(query: str, cache_key: tuple[object, ...]) -> dict:
+    api_key = os.environ.get("GEOAPIFY_API_KEY", "").strip()
+    if api_key:
+        try:
+            return await _request_geoapify_data(cache_key, api_key)
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code in {401, 403}:
+                logger.error("Geoapify rejected GEOAPIFY_API_KEY with HTTP %s", error.response.status_code)
+                raise
+            logger.warning("Geoapify request failed; trying Overpass: %s", error)
+        except (httpx.HTTPError, ValueError, TypeError) as error:
+            logger.warning("Geoapify request failed; trying Overpass: %s", error)
+    return await _request_overpass_data(query)
+
+
+async def _request_geoapify_data(cache_key: tuple[object, ...], api_key: str) -> dict:
+    latitude, longitude, radius_meters, category = cache_key
+    params = {
+        "categories": ",".join(GEOAPIFY_CATEGORIES[category]),
+        "filter": f"circle:{longitude},{latitude},{radius_meters}",
+        "bias": f"proximity:{longitude},{latitude}",
+        "limit": 20,
+        "lang": "en",
+        "apiKey": api_key,
+    }
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(5, connect=2), headers={"User-Agent": USER_AGENT}
+    ) as client:
+        response = await client.get(GEOAPIFY_URL, params=params)
+        response.raise_for_status()
+        payload = response.json()
+
+    return {
+        "elements": _geoapify_features_to_osm_elements(payload.get("features", [])),
+        "provider": "geoapify",
+    }
+
+
+def _geoapify_features_to_osm_elements(features: list[dict]) -> list[dict]:
+    osm_type_names = {"n": "node", "w": "way", "r": "relation"}
+    elements: list[dict] = []
+    for feature in features:
+        properties = feature.get("properties", {})
+        raw = properties.get("datasource", {}).get("raw", {})
+        osm_id = raw.get("osm_id")
+        osm_type = osm_type_names.get(raw.get("osm_type"))
+        name = properties.get("name") or raw.get("name")
+        geometry = feature.get("geometry", {}).get("coordinates", [])
+        longitude = properties.get("lon", geometry[0] if len(geometry) >= 2 else None)
+        latitude = properties.get("lat", geometry[1] if len(geometry) >= 2 else None)
+        if not isinstance(osm_id, int) or osm_type is None or not name or latitude is None or longitude is None:
+            continue
+
+        tags = {
+            key: value
+            for key, value in raw.items()
+            if key not in {"lat", "lon", "osm_id", "osm_type"} and isinstance(value, str)
+        }
+        tags["name"] = name
+        for source_key, target_key in (
+            ("street", "addr:street"),
+            ("housenumber", "addr:housenumber"),
+            ("city", "addr:city"),
+        ):
+            if properties.get(source_key):
+                tags.setdefault(target_key, properties[source_key])
+
+        elements.append({
+            "type": osm_type,
+            "id": osm_id,
+            "lat": latitude,
+            "lon": longitude,
+            "tags": tags,
+        })
+    return elements
+
+
+async def _request_overpass_data(query: str) -> dict:
+    last_error: httpx.HTTPError | None = None
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(4, connect=1.5), headers={"User-Agent": USER_AGENT}
+    ) as client:
+        for endpoint in OVERPASS_URLS:
+            try:
+                response = await client.post(
+                    endpoint,
+                    data={"data": query},
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+                data["provider"] = "overpass"
+                return data
+            except httpx.HTTPError as error:
+                last_error = error
+                logger.warning(
+                    "Overpass request to %s failed (%s): %s",
+                    endpoint,
+                    type(error).__name__,
+                    error,
+                )
+    if last_error:
+        raise last_error
+    raise httpx.ConnectError("No Overpass endpoint is available")
 
 
 async def search_cities(query: str, language: Literal["sv", "en"] = "sv") -> list[CityResult]:
