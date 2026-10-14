@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import math
 import re
 import time
@@ -21,6 +20,11 @@ OVERPASS_URLS = (
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "Vadervett/0.1 (weather-aware local discovery)"
 CACHE_SECONDS = 600
+STALE_CACHE_SECONDS = 3600
+PLACE_CACHE_MAX_ENTRIES = 256
+CITY_CACHE_SECONDS = 300
+CITY_STALE_SECONDS = 3600
+CITY_CACHE_MAX_ENTRIES = 128
 COMMONS_IMAGE_CACHE_SECONDS = 86_400
 
 CATEGORY_FILTERS: dict[PlaceCategory, str] = {
@@ -68,6 +72,7 @@ class CityResult(BaseModel):
 
 
 _place_cache: dict[tuple[object, ...], tuple[float, PlaceSearchResult]] = {}
+_city_cache: dict[tuple[str, str], tuple[float, list[CityResult]]] = {}
 _commons_image_cache: dict[tuple[str, float, float], tuple[float, tuple[str, str] | None]] = {}
 
 
@@ -330,20 +335,29 @@ async def find_nearby_places(
     )
     data: dict | None = None
     last_error: httpx.HTTPError | None = None
-    async with httpx.AsyncClient(timeout=11, headers={"User-Agent": USER_AGENT}) as client:
-        for endpoint in OVERPASS_URLS:
-            try:
-                response = await client.post(
-                    endpoint,
-                    data={"data": query},
-                    headers={"Accept": "application/json"},
-                )
-                response.raise_for_status()
-                data = response.json()
-                break
-            except httpx.HTTPError as error:
-                last_error = error
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(6, connect=2), headers={"User-Agent": USER_AGENT}
+        ) as client:
+            for endpoint in OVERPASS_URLS:
+                try:
+                    response = await client.post(
+                        endpoint,
+                        data={"data": query},
+                        headers={"Accept": "application/json"},
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    break
+                except httpx.HTTPError as error:
+                    last_error = error
+    except httpx.HTTPError as error:
+        last_error = error
+
     if data is None:
+        stale = _place_cache.get(cache_key)
+        if stale and time.monotonic() - stale[0] < STALE_CACHE_SECONDS:
+            return stale[1]
         if last_error:
             raise last_error
         raise httpx.ConnectError("No Overpass endpoint is available")
@@ -365,24 +379,36 @@ async def find_nearby_places(
         radius_meters=radius_meters,
         data_timestamp=data.get("osm3s", {}).get("timestamp_osm_base"),
     )
-    image_candidates = [place for place in result.places[:6] if not place.image_url]
-    if image_candidates:
-        async with httpx.AsyncClient(timeout=4, headers={"User-Agent": USER_AGENT}) as client:
-            await asyncio.gather(*(_find_commons_image(client, place) for place in image_candidates))
+    _place_cache.pop(cache_key, None)
     _place_cache[cache_key] = (time.monotonic(), result)
+    while len(_place_cache) > PLACE_CACHE_MAX_ENTRIES:
+        _place_cache.pop(next(iter(_place_cache)))
     return result
 
 
 async def search_cities(query: str, language: Literal["sv", "en"] = "sv") -> list[CityResult]:
-    async with httpx.AsyncClient(timeout=10, headers={"User-Agent": USER_AGENT}) as client:
-        response = await client.get(
-            GEOCODING_URL,
-            params={"name": query, "count": 8, "language": language, "format": "json", "countryCode": "SE"},
-        )
-        response.raise_for_status()
-        data = response.json()
+    cache_key = (" ".join(query.casefold().split()), language)
+    cached = _city_cache.get(cache_key)
+    if cached and time.monotonic() - cached[0] < CITY_CACHE_SECONDS:
+        return cached[1]
 
-    return [
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(5, connect=2), headers={"User-Agent": USER_AGENT}
+        ) as client:
+            response = await client.get(
+                GEOCODING_URL,
+                params={"name": query, "count": 8, "language": language, "format": "json", "countryCode": "SE"},
+            )
+            response.raise_for_status()
+            data = response.json()
+    except (httpx.HTTPError, ValueError, TypeError):
+        stale = _city_cache.get(cache_key)
+        if stale and time.monotonic() - stale[0] < CITY_STALE_SECONDS:
+            return stale[1]
+        raise
+
+    results = [
         CityResult(
             name=item["name"],
             admin1=item.get("admin1"),
@@ -394,3 +420,8 @@ async def search_cities(query: str, language: Literal["sv", "en"] = "sv") -> lis
         for item in data.get("results", [])
         if "latitude" in item and "longitude" in item and "name" in item
     ]
+    _city_cache.pop(cache_key, None)
+    _city_cache[cache_key] = (time.monotonic(), results)
+    while len(_city_cache) > CITY_CACHE_MAX_ENTRIES:
+        _city_cache.pop(next(iter(_city_cache)))
+    return results
