@@ -634,6 +634,7 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(FakeClient.params["apiKey"], "test-api-key")
         self.assertEqual(FakeClient.params["filter"], "circle:17.83508,59.42268,1500")
+        self.assertEqual(FakeClient.params["lang"], "sv")
         self.assertEqual(result.provider, "geoapify")
         self.assertEqual(result.places[0].name, "Jakobsbergs kafé")
         self.assertEqual(result.places[0].category, "Kafé")
