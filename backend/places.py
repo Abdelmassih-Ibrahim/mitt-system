@@ -11,7 +11,7 @@ from typing import Literal
 from urllib.parse import quote
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 PlaceCategory = Literal["all", "cafe", "culture"]
 PlaceInterest = Literal["coffee", "nature", "culture", "shopping", "photography", "fitness"]
@@ -67,6 +67,14 @@ class NearbyPlace(BaseModel):
     map_url: str
     directions_url: str
     reason: str
+
+
+class PlaceImageCandidate(BaseModel):
+    osm_type: Literal["node", "way", "relation"]
+    osm_id: int
+    name: str = Field(min_length=1, max_length=120)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
 
 
 class PlaceSearchResult(BaseModel):
@@ -131,12 +139,21 @@ async def _find_commons_image(client: httpx.AsyncClient, place: NearbyPlace) -> 
     if place.image_url:
         return
 
-    cache_key = (_normalized_commons_text(place.name), round(place.latitude, 5), round(place.longitude, 5))
+    image = await _lookup_commons_image(client, place.name, place.latitude, place.longitude)
+    if image:
+        place.image_url, place.image_page_url = image
+
+
+async def _lookup_commons_image(
+    client: httpx.AsyncClient,
+    name: str,
+    latitude: float,
+    longitude: float,
+) -> tuple[str, str] | None:
+    cache_key = (_normalized_commons_text(name), round(latitude, 5), round(longitude, 5))
     cached = _commons_image_cache.get(cache_key)
     if cached and time.monotonic() - cached[0] < COMMONS_IMAGE_CACHE_SECONDS:
-        if cached[1]:
-            place.image_url, place.image_page_url = cached[1]
-        return
+        return cached[1]
 
     image: tuple[str, str] | None = None
     try:
@@ -145,7 +162,7 @@ async def _find_commons_image(client: httpx.AsyncClient, place: NearbyPlace) -> 
             params={
                 "action": "query",
                 "generator": "search",
-                "gsrsearch": f'"{place.name}"',
+                "gsrsearch": f'"{name}"',
                 "gsrnamespace": 6,
                 "gsrlimit": 8,
                 "prop": "imageinfo",
@@ -155,13 +172,37 @@ async def _find_commons_image(client: httpx.AsyncClient, place: NearbyPlace) -> 
             },
         )
         response.raise_for_status()
-        image = commons_image_from_response(response.json(), place.name)
+        image = commons_image_from_response(response.json(), name)
     except (httpx.HTTPError, ValueError, TypeError):
         pass
 
     _commons_image_cache[cache_key] = (time.monotonic(), image)
-    if image:
-        place.image_url, place.image_page_url = image
+    return image
+
+
+async def find_commons_images(
+    candidates: list[PlaceImageCandidate],
+) -> dict[str, dict[str, str]]:
+    candidates = candidates[:6]
+    if not candidates:
+        return {}
+
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(4, connect=2), headers={"User-Agent": USER_AGENT}
+    ) as client:
+        images = await asyncio.gather(*(
+            _lookup_commons_image(client, candidate.name, candidate.latitude, candidate.longitude)
+            for candidate in candidates
+        ))
+
+    return {
+        f"{candidate.osm_type}/{candidate.osm_id}": {
+            "image_url": image[0],
+            "image_page_url": image[1],
+        }
+        for candidate, image in zip(candidates, images)
+        if image is not None
+    }
 
 
 def haversine_meters(latitude_a: float, longitude_a: float, latitude_b: float, longitude_b: float) -> float:
