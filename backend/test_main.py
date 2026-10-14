@@ -356,7 +356,7 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
 
         class FakeClient:
             async def get(self, url: str, params: dict) -> FakeResponse:
-                self.params = params
+                type(self).params = params
                 return FakeResponse()
 
         place = NearbyPlace(
@@ -637,7 +637,8 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.provider, "geoapify")
         self.assertEqual(result.places[0].name, "Jakobsbergs kafé")
         self.assertEqual(result.places[0].category, "Kafé")
-        self.assertIn("way", result.places[0].map_url) if result.places[0].osm_type == "way" else self.assertIn("node", result.places[0].map_url)
+        self.assertEqual(result.places[0].osm_type, "node")
+        self.assertIn("/node/12666718336", result.places[0].map_url)
 
 
 class CapsuleApiTests(unittest.TestCase):
