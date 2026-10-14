@@ -22,6 +22,8 @@ $env:GEOAPIFY_API_KEY = "din-geoapify-nyckel"
 
 Skapa en kostnadsfri API-nyckel hos [Geoapify](https://myprojects.geoapify.com/) och ersätt exempelvärdet ovan. Nyckeln läses bara av Python-backenden; lägg den inte i frontendens `NEXT_PUBLIC_*`-variabler eller i Git. Geoapifys Places API söker i en exakt radie runt koordinaterna och den kostnadsfria nivån har 3 000 credits per dag. Utan nyckeln används Overpass som reservkälla.
 
+För foton av själva verksamheten kan Google Places Photos aktiveras separat med `GOOGLE_MAPS_API_KEY` i samma terminal. Det kräver en Google Cloud-nyckel med Places API och fakturering aktiverad; anrop görs bara när nyckeln är konfigurerad. Lås nyckeln till Places API och håll den i backenden. Utan den används Wikimedia Commons när en matchande, attribuerbar bild finns; annars visas platshållaren.
+
 Terminal 2, webbsidan:
 
 ```powershell
@@ -60,7 +62,7 @@ Testa Pythonbackendens väderregler och kapsel-API:
 - Aktuellt väder och timprognos hämtas från [Open-Meteo](https://open-meteo.com/). Vädret uppdateras var 15:e minut; det är prognosmodellens senaste uppgifter, inte sekundfärska observationer.
 - Backend cachar väder i fem minuter och ortsökningar i fem minuter. Vid upstream-avbrott kan senast hämtade väder och platser återanvändas i upp till en timme; vädervyn visar då datans faktiska hämtningstid. Cacheminnet gäller per backendprocess.
 - Ortsökning använder Open-Meteos Geocoding API. Närplatser hämtas i första hand från Geoapify Places API, som använder OpenStreetMap-data och filtrerar på vald GPS-position och radie. Overpass används som reserv om Geoapify-nyckel saknas eller tjänsten tillfälligt fallerar. Geoapify-attribuering visas när den källan används. Kartresultat cachelagras; vid fel utan cache visas ett återförsök i stället för påhittade platser. API-svaren innehåller `Server-Timing` för att kunna inspektera backendens svarstid.
-- Platsbilder visas direkt från en `wikimedia_commons`-tagg i OpenStreetMap när sådan finns. För synliga platser utan bild görs en separat, asynkron sökning i Wikimedia Commons efter en bild vars titel matchar platsnamnet; den påverkar inte väntetiden för platslistan och cachelagras i ett dygn. Källsidan länkas bredvid bilden. Om Commons saknar en verifierbar träff visas kategorimarkören `(C)` eller `(M)` i stället för en generisk eller påhittad bild.
+- Platsbilder visas direkt från en `wikimedia_commons`-tagg i OpenStreetMap när sådan finns. För saknade foton görs ett separat, asynkront bilduppslag för högst sex synliga platser, utan att fördröja platslistan. Med `GOOGLE_MAPS_API_KEY` hämtas foton från Google Places Photos och matchas på platsnamn och koordinater; Googles fotoreferenser cachelagras inte och fotografattribution visas. Annars söker appen Wikimedia Commons efter en titel som matchar platsnamnet. Bildkällan länkas bredvid fotot. Om ingen verifierbar bild finns visas kategorimarkören `(C)` eller `(M)` i stället för en generisk eller påhittad bild.
 - Öppettider visas endast när de finns i OpenStreetMap. De verifieras inte som “öppet nu”. Kartbidrag kan vara ofullständiga eller gamla.
 - Ingen inloggning krävs. Webbläsaren skapar ett slumpmässigt ID i `localStorage`; backend använder det för att hålla preferenser och väderminnen åtskilda mellan webbläsare. Det är inte autentisering eller molnsynkronisering.
 - SQLite-filen `backend/weather_capsules.sqlite3` innehåller lokala preferenser och sparade väderminnen. Ta en säkerhetskopia innan du flyttar installationen.

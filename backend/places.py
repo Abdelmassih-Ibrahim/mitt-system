@@ -214,10 +214,10 @@ def _google_types_for_category(category: PlaceCategory) -> list[str]:
     if category == "cafe":
         return ["cafe"]
     if category == "culture":
-        return ["library", "movie_theater", "museum", "art_gallery", "performing_arts_theater", "market"]
+        return ["library", "movie_theater", "museum", "art_gallery", "performing_arts_theater", "farmers_market", "flea_market"]
     return [
         "cafe", "library", "movie_theater", "museum", "park", "gym",
-        "sports_complex", "art_gallery", "performing_arts_theater", "market",
+        "sports_complex", "art_gallery", "performing_arts_theater", "farmers_market", "flea_market",
     ]
 
 
@@ -280,13 +280,17 @@ async def _find_google_place_images(
             photo_name = photo.get("name")
             if not photo_name:
                 return None
-            photo_response = await client.get(
-                f"{GOOGLE_PLACES_URL}/{quote(photo_name, safe='/')}/media",
-                params={"maxWidthPx": 640, "maxHeightPx": 480, "skipHttpRedirect": "true"},
-                headers={"X-Goog-Api-Key": api_key},
-            )
-            photo_response.raise_for_status()
-            image_url = photo_response.json().get("photoUri")
+            try:
+                photo_response = await client.get(
+                    f"{GOOGLE_PLACES_URL}/{quote(photo_name, safe='/')}/media",
+                    params={"maxWidthPx": 640, "maxHeightPx": 480, "skipHttpRedirect": "true"},
+                    headers={"X-Goog-Api-Key": api_key},
+                )
+                photo_response.raise_for_status()
+                image_url = photo_response.json().get("photoUri")
+            except (httpx.HTTPError, ValueError, TypeError) as error:
+                logger.warning("Google place photo retrieval failed (%s): %s", type(error).__name__, error)
+                return None
             if not image_url:
                 return None
 

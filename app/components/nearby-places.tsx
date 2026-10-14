@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Coordinates, Language, NearbyPlace, PlaceCategory, WeatherPayload } from "../weather-types";
 
 type ResolvedPlaceImage = {
@@ -104,6 +104,8 @@ export default function NearbyPlaces({
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
   const [resolvedImages, setResolvedImages] = useState<Record<string, ResolvedPlaceImage>>({});
+  const resolvedImageLookups = useRef(new Set<string>());
+  const pendingImageLookups = useRef(new Set<string>());
   const [provider, setProvider] = useState<"overpass" | "geoapify">("overpass");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -145,12 +147,16 @@ export default function NearbyPlaces({
         setProvider(result.provider ?? "overpass");
         if (result.available === false) setError(text.serviceMessage);
         const imageCandidates = result.places
-          .filter((place) => !place.image_url)
+          .filter((place) => {
+            const key = `${place.osm_type}/${place.osm_id}`;
+            return !place.image_url && !resolvedImageLookups.current.has(key) && !pendingImageLookups.current.has(key);
+          })
           .slice(0, 6)
           .map(({ osm_type, osm_id, name, category, latitude, longitude }) => ({
             osm_type, osm_id, name, category, latitude, longitude,
           }));
         if (imageCandidates.length) {
+          imageCandidates.forEach((place) => pendingImageLookups.current.add(`${place.osm_type}/${place.osm_id}`));
           void fetch(`${API_BASE}/api/place-images`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -164,11 +170,21 @@ export default function NearbyPlaces({
             }),
             signal: controller.signal,
           })
-            .then((response) => response.ok
-              ? response.json() as Promise<Record<string, ResolvedPlaceImage>>
-              : {})
-            .then((images) => setResolvedImages((current) => ({ ...current, ...images })))
-            .catch(() => undefined);
+            .then(async (response) => {
+              if (!response.ok) throw new Error("place-images-unavailable");
+              return response.json() as Promise<Record<string, ResolvedPlaceImage>>;
+            })
+            .then((images) => {
+              imageCandidates.forEach((place) => {
+                const key = `${place.osm_type}/${place.osm_id}`;
+                pendingImageLookups.current.delete(key);
+                resolvedImageLookups.current.add(key);
+              });
+              setResolvedImages((current) => ({ ...current, ...images }));
+            })
+            .catch(() => {
+              imageCandidates.forEach((place) => pendingImageLookups.current.delete(`${place.osm_type}/${place.osm_id}`));
+            });
         }
       })
       .catch((fetchError: unknown) => {

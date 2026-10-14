@@ -336,6 +336,9 @@ class WeatherLogicTests(unittest.TestCase):
 
 
 class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        _commons_image_cache.clear()
+
     async def test_name_search_adds_matching_photo_and_source_link(self) -> None:
         class FakeResponse:
             def raise_for_status(self) -> None:
@@ -376,7 +379,7 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(place.image_url, "https://thumb.wikimedia.org/nearby.jpg")
         self.assertEqual(place.image_page_url, "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
-        self.assertEqual(client.params["gsrsearch"], '"Lilla parken"')
+        self.assertEqual(FakeClient.params["gsrsearch"], '"Lilla parken"')
 
     async def test_batch_lookup_returns_image_urls_for_visible_places(self) -> None:
         class FakeResponse:
@@ -421,6 +424,37 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(images["node/9812"]["image_url"], "https://thumb.wikimedia.org/nearby.jpg")
         self.assertEqual(images["node/9812"]["image_page_url"], "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
+
+    async def test_wikimedia_errors_are_not_cached_as_missing_photos(self) -> None:
+        class FakeClient:
+            calls = 0
+
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def get(self, *_args, **_kwargs):
+                type(self).calls += 1
+                request = httpx.Request("GET", "https://commons.wikimedia.org/w/api.php")
+                response = httpx.Response(403, request=request)
+                raise httpx.HTTPStatusError("blocked", request=request, response=response)
+
+        candidate = PlaceImageCandidate(
+            osm_type="node", osm_id=8755, name="Photo retry test", category="Kafé",
+            latitude=60.5, longitude=18.5,
+        )
+        with patch("backend.places.httpx.AsyncClient", FakeClient):
+            first = await find_commons_images([candidate])
+            second = await find_commons_images([candidate])
+
+        self.assertEqual(first, {})
+        self.assertEqual(second, {})
+        self.assertEqual(FakeClient.calls, 2)
 
     async def test_google_place_photo_requires_exact_name_and_nearby_match(self) -> None:
         class FakeResponse:
