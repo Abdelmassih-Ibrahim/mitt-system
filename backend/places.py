@@ -329,23 +329,15 @@ async def find_place_images(
         return {}
 
     google_key = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
-    images: dict[str, dict[str, object]] = {}
-    if google_key:
-        try:
-            images = await _find_google_place_images(
-                latitude, longitude, radius_meters, category, language, candidates, google_key
-            )
-        except (httpx.HTTPError, ValueError, TypeError) as error:
-            logger.warning("Google Places photo lookup failed (%s): %s", type(error).__name__, error)
-
-    missing = [
-        candidate
-        for candidate in candidates
-        if f"{candidate.osm_type}/{candidate.osm_id}" not in images
-    ]
-    if missing:
-        images.update(await find_commons_images(missing))
-    return images
+    if not google_key:
+        return {}
+    try:
+        return await _find_google_place_images(
+            latitude, longitude, radius_meters, category, language, candidates, google_key
+        )
+    except (httpx.HTTPError, ValueError, TypeError) as error:
+        logger.warning("Google Places photo lookup failed (%s): %s", type(error).__name__, error)
+        return {}
 
 
 def haversine_meters(latitude_a: float, longitude_a: float, latitude_b: float, longitude_b: float) -> float:
