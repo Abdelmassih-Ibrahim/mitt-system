@@ -337,7 +337,7 @@ async def find_nearby_places(
     interests: list[PlaceInterest] | None = None,
     budget: PlaceBudget = "free",
 ) -> PlaceSearchResult:
-    cache_key = (round(latitude, 4), round(longitude, 4), radius_meters, category)
+    cache_key = (round(latitude, 5), round(longitude, 5), radius_meters, category)
     cached = _place_cache.get(cache_key)
     data = cached[1] if cached and time.monotonic() - cached[0] < CACHE_SECONDS else None
 
@@ -351,7 +351,9 @@ async def find_nearby_places(
     if data is None:
         task = _place_inflight.get(cache_key)
         if task is None:
-            task = asyncio.create_task(_request_place_data(query, cache_key))
+            task = asyncio.create_task(
+                _request_place_data(query, latitude, longitude, radius_meters, category)
+            )
             _place_inflight[cache_key] = task
         try:
             data = await asyncio.shield(task)
@@ -391,11 +393,17 @@ async def find_nearby_places(
     return result
 
 
-async def _request_place_data(query: str, cache_key: tuple[object, ...]) -> dict:
+async def _request_place_data(
+    query: str,
+    latitude: float,
+    longitude: float,
+    radius_meters: int,
+    category: PlaceCategory,
+) -> dict:
     api_key = os.environ.get("GEOAPIFY_API_KEY", "").strip()
     if api_key:
         try:
-            return await _request_geoapify_data(cache_key, api_key)
+            return await _request_geoapify_data(latitude, longitude, radius_meters, category, api_key)
         except httpx.HTTPStatusError as error:
             if error.response.status_code in {401, 403}:
                 logger.error("Geoapify rejected GEOAPIFY_API_KEY with HTTP %s", error.response.status_code)
@@ -406,8 +414,13 @@ async def _request_place_data(query: str, cache_key: tuple[object, ...]) -> dict
     return await _request_overpass_data(query)
 
 
-async def _request_geoapify_data(cache_key: tuple[object, ...], api_key: str) -> dict:
-    latitude, longitude, radius_meters, category = cache_key
+async def _request_geoapify_data(
+    latitude: float,
+    longitude: float,
+    radius_meters: int,
+    category: PlaceCategory,
+    api_key: str,
+) -> dict:
     params = {
         "categories": ",".join(GEOAPIFY_CATEGORIES[category]),
         "filter": f"circle:{longitude},{latitude},{radius_meters}",
