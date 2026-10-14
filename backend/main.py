@@ -16,7 +16,16 @@ import httpx
 from fastapi import FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from backend.places import PlaceBudget, PlaceCategory, PlaceInterest, PlaceSearchResult, find_nearby_places, search_cities
+from backend.places import (
+    PlaceBudget,
+    PlaceCategory,
+    PlaceImageCandidate,
+    PlaceInterest,
+    PlaceSearchResult,
+    find_commons_images,
+    find_nearby_places,
+    search_cities,
+)
 from backend.preferences import AppPreferences, DEFAULT_PREFERENCES
 from backend.localization import translate_payload
 
@@ -164,6 +173,10 @@ class CapsuleCreate(BaseModel):
 class Capsule(CapsuleCreate):
     id: int
     saved_at: str
+
+
+class PlaceImagesRequest(BaseModel):
+    places: list[PlaceImageCandidate] = Field(default_factory=list, max_length=6)
 
 
 WEATHER_CODES: dict[int, tuple[str, str, str]] = {
@@ -804,6 +817,11 @@ async def get_nearby_places(
             available=False,
             message="Karttjänsten svarar inte just nu. Försök igen lite senare.",
         )
+
+
+@app.post("/api/place-images")
+async def get_place_images(request: PlaceImagesRequest) -> dict[str, dict[str, str]]:
+    return await find_commons_images(request.places)
 
 
 @app.get("/api/preferences", response_model=AppPreferences)

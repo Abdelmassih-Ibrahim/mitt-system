@@ -94,6 +94,7 @@ export default function NearbyPlaces({
 }) {
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
+  const [resolvedImages, setResolvedImages] = useState<Record<string, { image_url: string; image_page_url: string }>>({});
   const [provider, setProvider] = useState<"overpass" | "geoapify">("overpass");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -134,6 +135,25 @@ export default function NearbyPlaces({
         setPlaces(result.places);
         setProvider(result.provider ?? "overpass");
         if (result.available === false) setError(text.serviceMessage);
+        const imageCandidates = result.places
+          .filter((place) => !place.image_url)
+          .slice(0, 6)
+          .map(({ osm_type, osm_id, name, latitude, longitude }) => ({
+            osm_type, osm_id, name, latitude, longitude,
+          }));
+        if (imageCandidates.length) {
+          void fetch(`${API_BASE}/api/place-images`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ places: imageCandidates }),
+            signal: controller.signal,
+          })
+            .then((response) => response.ok
+              ? response.json() as Promise<Record<string, { image_url: string; image_page_url: string }>>
+              : {})
+            .then((images) => setResolvedImages((current) => ({ ...current, ...images })))
+            .catch(() => undefined);
+        }
       })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof Error && fetchError.name === "AbortError") return;
@@ -175,29 +195,34 @@ export default function NearbyPlaces({
 
       {places.length ? (
         <div className="places-list">
-          {places.slice(0, 6).map((place) => (
-            <article className="place-row" key={`${place.osm_type}-${place.osm_id}`}>
-              <div
-                className={`place-photo${place.image_url ? " place-photo--image" : " place-photo--placeholder"}`}
-                role="img"
-                aria-label={place.image_url ? `${place.name}, Wikimedia Commons photo` : `${place.category}: ${place.name}`}
-                style={place.image_url ? { backgroundImage: `url("${place.image_url}")` } : undefined}
-              >
-                <span className="place-photo-mark" aria-hidden="true">({place.category === "Kafé" ? "C" : "M"})</span>
-              </div>
-              <div className="place-copy">
-                <div className="place-name-line"><h3>{place.name}</h3><span>{formatDistance(place.distance_meters, language)}</span></div>
-                <p className="place-meta">{localizeCategory(place.category, language)}{place.address ? ` · ${place.address}` : ""}</p>
-                <p className="place-reason">{place.reason}</p>
-                <p className="place-hours">{place.opening_hours ? `${text.hours}: ${place.opening_hours}` : text.noHours} · {place.fee === true ? text.feeYes : place.fee === false ? text.feeNo : text.feeUnknown}</p>
-              </div>
-              <div className="place-actions">
-                <a href={place.directions_url} target="_blank" rel="noreferrer">{text.directions} ↗</a>
-                <a href={place.map_url} target="_blank" rel="noreferrer">{text.map}</a>
-                {place.image_page_url ? <a href={place.image_page_url} target="_blank" rel="noreferrer">{text.photoSource} ↗</a> : null}
-              </div>
-            </article>
-          ))}
+          {places.slice(0, 6).map((place) => {
+            const image = resolvedImages[`${place.osm_type}/${place.osm_id}`];
+            const imageUrl = place.image_url ?? image?.image_url;
+            const imagePageUrl = place.image_page_url ?? image?.image_page_url;
+            return (
+              <article className="place-row" key={`${place.osm_type}-${place.osm_id}`}>
+                <div
+                  className={`place-photo${imageUrl ? " place-photo--image" : " place-photo--placeholder"}`}
+                  role="img"
+                  aria-label={imageUrl ? `${place.name}, Wikimedia Commons photo` : `${place.category}: ${place.name}`}
+                  style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
+                >
+                  <span className="place-photo-mark" aria-hidden="true">({place.category === "Kafé" ? "C" : "M"})</span>
+                </div>
+                <div className="place-copy">
+                  <div className="place-name-line"><h3>{place.name}</h3><span>{formatDistance(place.distance_meters, language)}</span></div>
+                  <p className="place-meta">{localizeCategory(place.category, language)}{place.address ? ` · ${place.address}` : ""}</p>
+                  <p className="place-reason">{place.reason}</p>
+                  <p className="place-hours">{place.opening_hours ? `${text.hours}: ${place.opening_hours}` : text.noHours} · {place.fee === true ? text.feeYes : place.fee === false ? text.feeNo : text.feeUnknown}</p>
+                </div>
+                <div className="place-actions">
+                  <a href={place.directions_url} target="_blank" rel="noreferrer">{text.directions} ↗</a>
+                  <a href={place.map_url} target="_blank" rel="noreferrer">{text.map}</a>
+                  {imagePageUrl ? <a href={imagePageUrl} target="_blank" rel="noreferrer">{text.photoSource} ↗</a> : null}
+                </div>
+              </article>
+            );
+          })}
         </div>
       ) : null}
       <p className="map-attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">{text.attribution}</a>{provider === "geoapify" ? <> · <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">{text.poweredByGeoapify}</a></> : null}</p>

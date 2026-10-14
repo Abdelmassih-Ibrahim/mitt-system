@@ -27,11 +27,14 @@ from backend.main import (
 )
 from backend.places import (
     NearbyPlace,
+    PlaceImageCandidate,
     CACHE_SECONDS,
+    _commons_image_cache,
     _city_cache,
     _find_commons_image,
     _place_cache,
     commons_image_from_response,
+    find_commons_images,
     find_nearby_places,
     parse_elements,
     search_cities,
@@ -373,6 +376,49 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(place.image_url, "https://thumb.wikimedia.org/nearby.jpg")
         self.assertEqual(place.image_page_url, "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
         self.assertEqual(client.params["gsrsearch"], '"Lilla parken"')
+
+    async def test_batch_lookup_returns_image_urls_for_visible_places(self) -> None:
+        class FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return {
+                    "query": {"pages": {"123": {
+                        "title": "File:Lilla parken photo.jpg",
+                        "index": 0,
+                        "imageinfo": [{
+                            "thumburl": "https://thumb.wikimedia.org/nearby.jpg",
+                            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Nearby.jpg",
+                            "mime": "image/jpeg",
+                        }],
+                    }}}
+                }
+
+        class FakeClient:
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def get(self, *_args, **_kwargs) -> FakeResponse:
+                return FakeResponse()
+
+        _commons_image_cache.clear()
+        with patch("backend.places.httpx.AsyncClient", FakeClient):
+            images = await find_commons_images([
+                PlaceImageCandidate(
+                    osm_type="node", osm_id=9812, name="Lilla parken",
+                    latitude=60.01234, longitude=18.05678,
+                )
+            ])
+
+        self.assertEqual(images["node/9812"]["image_url"], "https://thumb.wikimedia.org/nearby.jpg")
+        self.assertEqual(images["node/9812"]["image_page_url"], "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
 
 
 def sample_weather_response() -> dict:
