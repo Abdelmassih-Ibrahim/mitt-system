@@ -86,6 +86,65 @@ function localizeCategory(category: string, language: Language) {
   } as Record<string, string>)[category] ?? category;
 }
 
+function normalizePhotoSearchText(value: string) {
+  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+async function findCommonsPhoto(
+  placeName: string,
+  signal: AbortSignal,
+): Promise<ResolvedPlaceImage | null> {
+  const normalizedName = normalizePhotoSearchText(placeName);
+  if (["park", "stadsparken", "museum", "bibliotek", "library", "cafe", "kafe"].includes(normalizedName)) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    action: "query",
+    generator: "search",
+    gsrsearch: `"${placeName}"`,
+    gsrnamespace: "6",
+    gsrlimit: "5",
+    prop: "imageinfo",
+    iiprop: "url|mime",
+    iiurlwidth: "640",
+    format: "json",
+    origin: "*",
+  });
+
+  try {
+    const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, { signal });
+    if (!response.ok) return null;
+    const data = await response.json() as {
+      query?: {
+        pages?: Record<string, {
+          title?: string;
+          index?: number;
+          imageinfo?: Array<{ thumburl?: string; url?: string; descriptionurl?: string; mime?: string }>;
+        }>;
+      };
+    };
+    const pages = Object.values(data.query?.pages ?? {}).sort((left, right) => (left.index ?? 0) - (right.index ?? 0));
+    for (const page of pages) {
+      const title = normalizePhotoSearchText((page.title ?? "").replace(/^File:/i, ""));
+      if (!title.includes(normalizedName)) continue;
+      const image = page.imageinfo?.[0];
+      if (image?.mime && !image.mime.startsWith("image/")) continue;
+      const imageUrl = image?.thumburl ?? image?.url;
+      if (!imageUrl || !image?.descriptionurl) continue;
+      return {
+        image_url: imageUrl,
+        image_page_url: image.descriptionurl,
+        image_source: "commons",
+        author_attributions: [],
+      };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export default function NearbyPlaces({
   coordinates,
   weather,
@@ -174,7 +233,22 @@ export default function NearbyPlaces({
               if (!response.ok) throw new Error("place-images-unavailable");
               return response.json() as Promise<Record<string, ResolvedPlaceImage>>;
             })
-            .then((images) => {
+            .then(async (googleImages) => {
+              const missing = imageCandidates.filter((place) => !googleImages[`${place.osm_type}/${place.osm_id}`]);
+              const commonsImages = await Promise.all(missing.map(async (place) => ({
+                key: `${place.osm_type}/${place.osm_id}`,
+                image: await findCommonsPhoto(place.name, controller.signal),
+              })));
+              return {
+                ...googleImages,
+                ...Object.fromEntries(commonsImages.flatMap(({ key, image }) => image ? [[key, image]] : [])),
+              };
+            })
+            .then((images: Record<string, ResolvedPlaceImage>) => {
+              if (controller.signal.aborted) {
+                imageCandidates.forEach((place) => pendingImageLookups.current.delete(`${place.osm_type}/${place.osm_id}`));
+                return;
+              }
               imageCandidates.forEach((place) => {
                 const key = `${place.osm_type}/${place.osm_id}`;
                 pendingImageLookups.current.delete(key);
