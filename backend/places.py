@@ -21,6 +21,7 @@ OVERPASS_URLS = (
     "https://overpass-api.de/api/interpreter",
 )
 GEOAPIFY_URL = "https://api.geoapify.com/v2/places"
+GOOGLE_PLACES_URL = "https://places.googleapis.com/v1"
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 USER_AGENT = "Vadervett/0.1 (weather-aware local discovery)"
 CACHE_SECONDS = 600
@@ -73,6 +74,7 @@ class PlaceImageCandidate(BaseModel):
     osm_type: Literal["node", "way", "relation"]
     osm_id: int
     name: str = Field(min_length=1, max_length=120)
+    category: str
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
 
@@ -173,8 +175,9 @@ async def _lookup_commons_image(
         )
         response.raise_for_status()
         image = commons_image_from_response(response.json(), name)
-    except (httpx.HTTPError, ValueError, TypeError):
-        pass
+    except (httpx.HTTPError, ValueError, TypeError) as error:
+        logger.warning("Wikimedia image lookup failed (%s): %s", type(error).__name__, error)
+        return None
 
     _commons_image_cache[cache_key] = (time.monotonic(), image)
     return image
@@ -182,7 +185,7 @@ async def _lookup_commons_image(
 
 async def find_commons_images(
     candidates: list[PlaceImageCandidate],
-) -> dict[str, dict[str, str]]:
+) -> dict[str, dict[str, object]]:
     candidates = candidates[:6]
     if not candidates:
         return {}
@@ -199,10 +202,146 @@ async def find_commons_images(
         f"{candidate.osm_type}/{candidate.osm_id}": {
             "image_url": image[0],
             "image_page_url": image[1],
+            "image_source": "commons",
+            "author_attributions": [],
         }
         for candidate, image in zip(candidates, images)
         if image is not None
     }
+
+
+def _google_types_for_category(category: PlaceCategory) -> list[str]:
+    if category == "cafe":
+        return ["cafe"]
+    if category == "culture":
+        return ["library", "movie_theater", "museum", "art_gallery", "performing_arts_theater", "market"]
+    return [
+        "cafe", "library", "movie_theater", "museum", "park", "gym",
+        "sports_complex", "art_gallery", "performing_arts_theater", "market",
+    ]
+
+
+async def _find_google_place_images(
+    latitude: float,
+    longitude: float,
+    radius_meters: int,
+    category: PlaceCategory,
+    language: Literal["sv", "en"],
+    candidates: list[PlaceImageCandidate],
+    api_key: str,
+) -> dict[str, dict[str, object]]:
+    headers = {
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.photos",
+    }
+    request_body = {
+        "includedTypes": _google_types_for_category(category),
+        "maxResultCount": 20,
+        "rankPreference": "DISTANCE",
+        "languageCode": language,
+        "locationRestriction": {
+            "circle": {
+                "center": {"latitude": latitude, "longitude": longitude},
+                "radius": float(radius_meters),
+            }
+        },
+    }
+    async with httpx.AsyncClient(timeout=httpx.Timeout(6, connect=2)) as client:
+        response = await client.post(
+            f"{GOOGLE_PLACES_URL}/places:searchNearby",
+            json=request_body,
+            headers=headers,
+        )
+        response.raise_for_status()
+        google_places = response.json().get("places", [])
+
+        async def resolve_photo(candidate: PlaceImageCandidate) -> tuple[str, dict[str, object]] | None:
+            matching_places = []
+            for google_place in google_places:
+                google_name = google_place.get("displayName", {}).get("text", "")
+                location = google_place.get("location", {})
+                if _normalized_commons_text(google_name) != _normalized_commons_text(candidate.name):
+                    continue
+                if "latitude" not in location or "longitude" not in location:
+                    continue
+                distance = haversine_meters(
+                    candidate.latitude,
+                    candidate.longitude,
+                    location["latitude"],
+                    location["longitude"],
+                )
+                if distance <= 250 and google_place.get("photos"):
+                    matching_places.append((distance, google_place))
+            if not matching_places:
+                return None
+
+            google_place = min(matching_places, key=lambda match: match[0])[1]
+            photo = google_place["photos"][0]
+            photo_name = photo.get("name")
+            if not photo_name:
+                return None
+            photo_response = await client.get(
+                f"{GOOGLE_PLACES_URL}/{quote(photo_name, safe='/')}/media",
+                params={"maxWidthPx": 640, "maxHeightPx": 480, "skipHttpRedirect": "true"},
+                headers={"X-Goog-Api-Key": api_key},
+            )
+            photo_response.raise_for_status()
+            image_url = photo_response.json().get("photoUri")
+            if not image_url:
+                return None
+
+            attributions = []
+            for attribution in photo.get("authorAttributions", []):
+                author_url = attribution.get("uri", "")
+                if author_url.startswith("//"):
+                    author_url = f"https:{author_url}"
+                attributions.append({
+                    "display_name": attribution.get("displayName", ""),
+                    "url": author_url,
+                })
+            place_id = google_place.get("id", "")
+            maps_url = f"https://www.google.com/maps/search/?api=1&query_place_id={quote(place_id)}"
+            return f"{candidate.osm_type}/{candidate.osm_id}", {
+                "image_url": image_url,
+                "image_page_url": maps_url,
+                "image_source": "google",
+                "author_attributions": attributions,
+            }
+
+        matches = await asyncio.gather(*(resolve_photo(candidate) for candidate in candidates))
+    return {key: image for match in matches if match is not None for key, image in [match]}
+
+
+async def find_place_images(
+    latitude: float,
+    longitude: float,
+    radius_meters: int,
+    category: PlaceCategory,
+    language: Literal["sv", "en"],
+    candidates: list[PlaceImageCandidate],
+) -> dict[str, dict[str, object]]:
+    candidates = candidates[:6]
+    if not candidates:
+        return {}
+
+    google_key = os.environ.get("GOOGLE_MAPS_API_KEY", "").strip()
+    images: dict[str, dict[str, object]] = {}
+    if google_key:
+        try:
+            images = await _find_google_place_images(
+                latitude, longitude, radius_meters, category, language, candidates, google_key
+            )
+        except (httpx.HTTPError, ValueError, TypeError) as error:
+            logger.warning("Google Places photo lookup failed (%s): %s", type(error).__name__, error)
+
+    missing = [
+        candidate
+        for candidate in candidates
+        if f"{candidate.osm_type}/{candidate.osm_id}" not in images
+    ]
+    if missing:
+        images.update(await find_commons_images(missing))
+    return images
 
 
 def haversine_meters(latitude_a: float, longitude_a: float, latitude_b: float, longitude_b: float) -> float:

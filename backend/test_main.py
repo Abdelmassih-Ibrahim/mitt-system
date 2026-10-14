@@ -5,7 +5,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from fastapi.testclient import TestClient
@@ -36,6 +36,7 @@ from backend.places import (
     commons_image_from_response,
     find_commons_images,
     find_nearby_places,
+    find_place_images,
     parse_elements,
     search_cities,
 )
@@ -413,12 +414,81 @@ class CommonsImageTests(unittest.IsolatedAsyncioTestCase):
             images = await find_commons_images([
                 PlaceImageCandidate(
                     osm_type="node", osm_id=9812, name="Lilla parken",
+                    category="Park",
                     latitude=60.01234, longitude=18.05678,
                 )
             ])
 
         self.assertEqual(images["node/9812"]["image_url"], "https://thumb.wikimedia.org/nearby.jpg")
         self.assertEqual(images["node/9812"]["image_page_url"], "https://commons.wikimedia.org/wiki/File:Nearby.jpg")
+
+    async def test_google_place_photo_requires_exact_name_and_nearby_match(self) -> None:
+        class FakeResponse:
+            def __init__(self, payload: dict) -> None:
+                self.payload = payload
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict:
+                return self.payload
+
+        class FakeClient:
+            requests: list[tuple[str, dict]] = []
+
+            def __init__(self, *_args, **_kwargs) -> None:
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args) -> None:
+                return None
+
+            async def post(self, url: str, json: dict, headers: dict) -> FakeResponse:
+                self.requests.append((url, json))
+                return FakeResponse({"places": [{
+                    "id": "google-place-id",
+                    "displayName": {"text": "Cafe Koppen"},
+                    "location": {"latitude": 59.42321, "longitude": 17.83585},
+                    "photos": [{
+                        "name": "places/google-place-id/photos/photo-id",
+                        "authorAttributions": [{
+                            "displayName": "Photo author",
+                            "uri": "//maps.google.com/maps/contrib/123",
+                        }],
+                    }],
+                }]})
+
+            async def get(self, url: str, params: dict, headers: dict) -> FakeResponse:
+                self.requests.append((url, params))
+                return FakeResponse({"photoUri": "https://lh3.googleusercontent.com/photo"})
+
+        FakeClient.requests = []
+        with (
+            patch.dict("os.environ", {"GOOGLE_MAPS_API_KEY": "test-google-key"}),
+            patch("backend.places.httpx.AsyncClient", FakeClient),
+        ):
+            images = await find_place_images(
+                59.42268,
+                17.83508,
+                1500,
+                "cafe",
+                "sv",
+                [PlaceImageCandidate(
+                    osm_type="node", osm_id=1559437089, name="Café Koppen",
+                    category="Kafé", latitude=59.4232136, longitude=17.8358558,
+                )],
+            )
+
+        image = images["node/1559437089"]
+        self.assertEqual(image["image_source"], "google")
+        self.assertEqual(image["image_url"], "https://lh3.googleusercontent.com/photo")
+        self.assertEqual(image["author_attributions"], [{
+            "display_name": "Photo author",
+            "url": "https://maps.google.com/maps/contrib/123",
+        }])
+        self.assertEqual(FakeClient.requests[0][1]["locationRestriction"]["circle"]["radius"], 1500.0)
 
 
 def sample_weather_response() -> dict:
@@ -689,6 +759,40 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
 
 
 class CapsuleApiTests(unittest.TestCase):
+    def test_place_images_endpoint_returns_resolved_images(self) -> None:
+        image_result = {
+            "node/9812": {
+                "image_url": "https://thumb.wikimedia.org/nearby.jpg",
+                "image_page_url": "https://commons.wikimedia.org/wiki/File:Nearby.jpg",
+                "image_source": "commons",
+                "author_attributions": [],
+            }
+        }
+        resolver = AsyncMock(return_value=image_result)
+        with patch("backend.main.find_place_images", resolver), TestClient(app) as client:
+            response = client.post(
+                "/api/place-images",
+                json={
+                    "latitude": 60.01234,
+                    "longitude": 18.05678,
+                    "radius_meters": 1000,
+                    "category": "all",
+                    "language": "sv",
+                    "places": [{
+                        "osm_type": "node",
+                        "osm_id": 9812,
+                        "name": "Lilla parken",
+                        "category": "Park",
+                        "latitude": 60.01234,
+                        "longitude": 18.05678,
+                    }],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), image_result)
+        resolver.assert_awaited_once()
+
     def test_lan_frontend_origin_can_be_allowed(self) -> None:
         origin = "http://192.168.10.170:3000"
         with patch.dict("os.environ", {"WEATHER_ALLOWED_ORIGINS": origin}):

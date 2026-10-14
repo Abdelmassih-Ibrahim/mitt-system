@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import type { Coordinates, Language, NearbyPlace, PlaceCategory, WeatherPayload } from "../weather-types";
 
+type ResolvedPlaceImage = {
+  image_url: string;
+  image_page_url: string;
+  image_source: "commons" | "google";
+  author_attributions: Array<{ display_name: string; url: string }>;
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_WEATHER_API ?? (typeof window === "undefined" ? "http://127.0.0.1:8000" : `${window.location.protocol}//${window.location.hostname}:8000`);
 const copy = {
   sv: {
@@ -29,6 +36,7 @@ const copy = {
     distance: "från dig",
     attribution: "Kartdata © OpenStreetMap-bidragsgivare",
     poweredByGeoapify: "Powered by Geoapify",
+    googleMaps: "Google Maps",
   },
   en: {
     eyebrow: "NEAR YOU, FOR REAL",
@@ -54,6 +62,7 @@ const copy = {
     distance: "away",
     attribution: "Map data © OpenStreetMap contributors",
     poweredByGeoapify: "Powered by Geoapify",
+    googleMaps: "Google Maps",
   },
 };
 
@@ -94,7 +103,7 @@ export default function NearbyPlaces({
 }) {
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
-  const [resolvedImages, setResolvedImages] = useState<Record<string, { image_url: string; image_page_url: string }>>({});
+  const [resolvedImages, setResolvedImages] = useState<Record<string, ResolvedPlaceImage>>({});
   const [provider, setProvider] = useState<"overpass" | "geoapify">("overpass");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -138,18 +147,25 @@ export default function NearbyPlaces({
         const imageCandidates = result.places
           .filter((place) => !place.image_url)
           .slice(0, 6)
-          .map(({ osm_type, osm_id, name, latitude, longitude }) => ({
-            osm_type, osm_id, name, latitude, longitude,
+          .map(({ osm_type, osm_id, name, category, latitude, longitude }) => ({
+            osm_type, osm_id, name, category, latitude, longitude,
           }));
         if (imageCandidates.length) {
           void fetch(`${API_BASE}/api/place-images`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ places: imageCandidates }),
+            body: JSON.stringify({
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+              radius_meters: radius,
+              category,
+              language,
+              places: imageCandidates,
+            }),
             signal: controller.signal,
           })
             .then((response) => response.ok
-              ? response.json() as Promise<Record<string, { image_url: string; image_page_url: string }>>
+              ? response.json() as Promise<Record<string, ResolvedPlaceImage>>
               : {})
             .then((images) => setResolvedImages((current) => ({ ...current, ...images })))
             .catch(() => undefined);
@@ -204,7 +220,7 @@ export default function NearbyPlaces({
                 <div
                   className={`place-photo${imageUrl ? " place-photo--image" : " place-photo--placeholder"}`}
                   role="img"
-                  aria-label={imageUrl ? `${place.name}, Wikimedia Commons photo` : `${place.category}: ${place.name}`}
+                  aria-label={imageUrl ? `${place.name}, ${image?.image_source === "google" ? "Google Places photo" : "Wikimedia Commons photo"}` : `${place.category}: ${place.name}`}
                   style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
                 >
                   <span className="place-photo-mark" aria-hidden="true">({place.category === "Kafé" ? "C" : "M"})</span>
@@ -218,7 +234,10 @@ export default function NearbyPlaces({
                 <div className="place-actions">
                   <a href={place.directions_url} target="_blank" rel="noreferrer">{text.directions} ↗</a>
                   <a href={place.map_url} target="_blank" rel="noreferrer">{text.map}</a>
-                  {imagePageUrl ? <a href={imagePageUrl} target="_blank" rel="noreferrer">{text.photoSource} ↗</a> : null}
+                  {imagePageUrl ? <a href={imagePageUrl} target="_blank" rel="noreferrer">{image?.image_source === "google" ? text.googleMaps : text.photoSource} ↗</a> : null}
+                  {image?.author_attributions.map((credit) => credit.url
+                    ? <a key={`${credit.display_name}-${credit.url}`} href={credit.url} target="_blank" rel="noreferrer">{credit.display_name}</a>
+                    : <span key={credit.display_name}>{credit.display_name}</span>)}
                 </div>
               </article>
             );

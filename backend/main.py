@@ -22,7 +22,7 @@ from backend.places import (
     PlaceImageCandidate,
     PlaceInterest,
     PlaceSearchResult,
-    find_commons_images,
+    find_place_images,
     find_nearby_places,
     search_cities,
 )
@@ -176,6 +176,11 @@ class Capsule(CapsuleCreate):
 
 
 class PlaceImagesRequest(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    radius_meters: int = Field(ge=250, le=5000)
+    category: PlaceCategory
+    language: Literal["sv", "en"]
     places: list[PlaceImageCandidate] = Field(default_factory=list, max_length=6)
 
 
@@ -820,8 +825,15 @@ async def get_nearby_places(
 
 
 @app.post("/api/place-images")
-async def get_place_images(request: PlaceImagesRequest) -> dict[str, dict[str, str]]:
-    return await find_commons_images(request.places)
+async def get_place_images(request: PlaceImagesRequest) -> dict[str, dict[str, object]]:
+    return await find_place_images(
+        request.latitude,
+        request.longitude,
+        request.radius_meters,
+        request.category,
+        request.language,
+        request.places,
+    )
 
 
 @app.get("/api/preferences", response_model=AppPreferences)
