@@ -28,6 +28,7 @@ const copy = {
     basedOn: "Relevans för dagens väder",
     distance: "från dig",
     attribution: "Kartdata © OpenStreetMap-bidragsgivare",
+    poweredByGeoapify: "Powered by Geoapify",
   },
   en: {
     eyebrow: "NEAR YOU, FOR REAL",
@@ -52,6 +53,7 @@ const copy = {
     basedOn: "Why it fits today",
     distance: "away",
     attribution: "Map data © OpenStreetMap contributors",
+    poweredByGeoapify: "Powered by Geoapify",
   },
 };
 
@@ -92,6 +94,7 @@ export default function NearbyPlaces({
 }) {
   const [category, setCategory] = useState<PlaceCategory>("all");
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
+  const [provider, setProvider] = useState<"overpass" | "geoapify">("overpass");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -125,10 +128,11 @@ export default function NearbyPlaces({
       .then(async (response) => {
         if (!response) return { places: [] as NearbyPlace[] };
         if (!response.ok) throw new Error("places-unavailable");
-        return response.json() as Promise<{ places: NearbyPlace[]; available?: boolean; message?: string | null }>;
+        return response.json() as Promise<{ places: NearbyPlace[]; available?: boolean; message?: string | null; provider?: "overpass" | "geoapify" }>;
       })
       .then((result) => {
         setPlaces(result.places);
+        setProvider(result.provider ?? "overpass");
         if (result.available === false) setError(text.serviceMessage);
       })
       .catch((fetchError: unknown) => {
@@ -196,7 +200,7 @@ export default function NearbyPlaces({
           ))}
         </div>
       ) : null}
-      <p className="map-attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">{text.attribution}</a></p>
+      <p className="map-attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">{text.attribution}</a>{provider === "geoapify" ? <> · <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">{text.poweredByGeoapify}</a></> : null}</p>
     </section>
   );
 }

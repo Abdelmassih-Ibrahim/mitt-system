@@ -16,8 +16,11 @@ Starta sedan två terminaler i projektmappen.
 Terminal 1, Python-API:
 
 ```powershell
+$env:GEOAPIFY_API_KEY = "din-geoapify-nyckel"
 .\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8000
 ```
+
+Skapa en kostnadsfri API-nyckel hos [Geoapify](https://myprojects.geoapify.com/) och ersätt exempelvärdet ovan. Nyckeln läses bara av Python-backenden; lägg den inte i frontendens `NEXT_PUBLIC_*`-variabler eller i Git. Geoapifys Places API söker i en exakt radie runt koordinaterna och den kostnadsfria nivån har 3 000 credits per dag. Utan nyckeln används Overpass som reservkälla.
 
 Terminal 2, webbsidan:
 
@@ -56,7 +59,7 @@ Testa Pythonbackendens väderregler och kapsel-API:
 
 - Aktuellt väder och timprognos hämtas från [Open-Meteo](https://open-meteo.com/). Vädret uppdateras var 15:e minut; det är prognosmodellens senaste uppgifter, inte sekundfärska observationer.
 - Backend cachar väder i fem minuter och ortsökningar i fem minuter. Vid upstream-avbrott kan senast hämtade väder och platser återanvändas i upp till en timme; vädervyn visar då datans faktiska hämtningstid. Cacheminnet gäller per backendprocess.
-- Ortsökning använder Open-Meteos Geocoding API. Närplatser hämtas från [OpenStreetMap](https://www.openstreetmap.org/copyright) via Overpass och returneras utan att vänta på valfri bildsökning. Karttjänsten har begränsad väntetid; vid fel utan cache visas ett återförsök i stället för påhittade platser. API-svaren innehåller `Server-Timing` för att kunna inspektera backendens svarstid.
+- Ortsökning använder Open-Meteos Geocoding API. Närplatser hämtas i första hand från Geoapify Places API, som använder OpenStreetMap-data och filtrerar på vald GPS-position och radie. Overpass används som reserv om Geoapify-nyckel saknas eller tjänsten tillfälligt fallerar. Geoapify-attribuering visas när den källan används. Kartresultat cachelagras; vid fel utan cache visas ett återförsök i stället för påhittade platser. API-svaren innehåller `Server-Timing` för att kunna inspektera backendens svarstid.
 - Platsbilder används från en `wikimedia_commons`-tagg i OpenStreetMap. Foto och källsida visas bara när kartdatan innehåller en bildlänk; annars visas kategorimarkören `(C)` eller `(M)`.
 - Öppettider visas endast när de finns i OpenStreetMap. De verifieras inte som “öppet nu”. Kartbidrag kan vara ofullständiga eller gamla.
 - Ingen inloggning krävs. Webbläsaren skapar ett slumpmässigt ID i `localStorage`; backend använder det för att hålla preferenser och väderminnen åtskilda mellan webbläsare. Det är inte autentisering eller molnsynkronisering.

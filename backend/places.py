@@ -352,7 +352,7 @@ async def find_nearby_places(
         task = _place_inflight.get(cache_key)
         if task is None:
             task = asyncio.create_task(
-                _request_place_data(query, latitude, longitude, radius_meters, category)
+                _request_place_data(query, latitude, longitude, radius_meters, category, language)
             )
             _place_inflight[cache_key] = task
         try:
@@ -399,11 +399,14 @@ async def _request_place_data(
     longitude: float,
     radius_meters: int,
     category: PlaceCategory,
+    language: Literal["sv", "en"],
 ) -> dict:
     api_key = os.environ.get("GEOAPIFY_API_KEY", "").strip()
     if api_key:
         try:
-            return await _request_geoapify_data(latitude, longitude, radius_meters, category, api_key)
+            return await _request_geoapify_data(
+                latitude, longitude, radius_meters, category, language, api_key
+            )
         except httpx.HTTPStatusError as error:
             if error.response.status_code in {401, 403}:
                 logger.error("Geoapify rejected GEOAPIFY_API_KEY with HTTP %s", error.response.status_code)
@@ -419,6 +422,7 @@ async def _request_geoapify_data(
     longitude: float,
     radius_meters: int,
     category: PlaceCategory,
+    language: Literal["sv", "en"],
     api_key: str,
 ) -> dict:
     params = {
@@ -426,7 +430,7 @@ async def _request_geoapify_data(
         "filter": f"circle:{longitude},{latitude},{radius_meters}",
         "bias": f"proximity:{longitude},{latitude}",
         "limit": 20,
-        "lang": "en",
+        "lang": language,
         "apiKey": api_key,
     }
     async with httpx.AsyncClient(
