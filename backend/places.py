@@ -337,7 +337,7 @@ async def find_nearby_places(
     interests: list[PlaceInterest] | None = None,
     budget: PlaceBudget = "free",
 ) -> PlaceSearchResult:
-    cache_key = (round(latitude, 5), round(longitude, 5), radius_meters, category)
+    cache_key = (round(latitude, 5), round(longitude, 5), radius_meters, category, language)
     cached = _place_cache.get(cache_key)
     data = cached[1] if cached and time.monotonic() - cached[0] < CACHE_SECONDS else None
 

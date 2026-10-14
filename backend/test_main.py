@@ -544,7 +544,7 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
         with patch("backend.places.httpx.AsyncClient", FakeClient):
             result, rainy_result = await asyncio.gather(
                 find_nearby_places(59.3293, 18.0686, 1000, "all", 3, 0, 0, 10),
-                find_nearby_places(59.3293, 18.0686, 1000, "all", 63, 80, 20, 4, language="en"),
+                find_nearby_places(59.3293, 18.0686, 1000, "all", 63, 80, 20, 4),
             )
 
         self.assertEqual(len(result.places), 1)
@@ -566,7 +566,7 @@ class ExternalApiCacheTests(unittest.IsolatedAsyncioTestCase):
             async def post(self, *_args, **_kwargs):
                 raise httpx.ConnectError("offline")
 
-        cache_key = (59.3293, 18.0686, 1000, "all")
+        cache_key = (59.3293, 18.0686, 1000, "all", "sv")
         _place_cache[cache_key] = (
             time.monotonic() - CACHE_SECONDS - 1,
             {"elements": [{
