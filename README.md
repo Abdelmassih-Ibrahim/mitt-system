@@ -2,6 +2,8 @@
 
 En väderstyrd svensk vardagsplanerare: “Don't just check the weather. Outsmart it.” Next.js visar upplevelsen; FastAPI i Python hämtar prognoser, räknar ut väderkomfort och råd, söker verkliga närplatser och sparar webbläsarspecifika preferenser och väderminnen i SQLite.
 
+**Status:** Projektet är inte färdigt ännu och utvecklas vidare. Mer information läggs till här löpande.
+
 ## Starta lokalt
 
 Installera backendberoenden en gång:
