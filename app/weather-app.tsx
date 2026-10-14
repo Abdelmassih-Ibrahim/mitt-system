@@ -274,7 +274,7 @@ export default function WeatherApp() {
       .then((data) => {
         if (!data) return;
         setWeather(data);
-        setLastUpdated(new Date());
+        setLastUpdated(new Date(data.refreshed_at));
         setStatusMessage("");
       })
       .catch((error: unknown) => {

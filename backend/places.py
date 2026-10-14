@@ -337,7 +337,7 @@ async def find_nearby_places(
     last_error: httpx.HTTPError | None = None
     try:
         async with httpx.AsyncClient(
-            timeout=httpx.Timeout(6, connect=2), headers={"User-Agent": USER_AGENT}
+            timeout=httpx.Timeout(5, connect=1.5), headers={"User-Agent": USER_AGENT}
         ) as client:
             for endpoint in OVERPASS_URLS:
                 try:
