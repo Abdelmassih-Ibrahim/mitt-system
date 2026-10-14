@@ -4,6 +4,7 @@ import os
 import random
 import sqlite3
 import json
+import time
 from uuid import UUID
 from contextlib import asynccontextmanager, closing
 from datetime import UTC, datetime
@@ -25,6 +26,12 @@ DATABASE_PATH = Path(
     os.environ.get("WEATHER_DATABASE_PATH", Path(__file__).with_name("weather_capsules.sqlite3"))
 )
 WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
+WEATHER_CACHE_SECONDS = 300
+WEATHER_STALE_SECONDS = 3600
+WEATHER_CACHE_MAX_ENTRIES = 128
+LOCATION_CACHE_SECONDS = 300
+LOCATION_STALE_SECONDS = 3600
+LOCATION_CACHE_MAX_ENTRIES = 128
 CURRENT_FIELDS = ",".join(
     (
         "temperature_2m",
@@ -222,7 +229,56 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "X-Client-ID"],
+    expose_headers=["Server-Timing"],
 )
+
+
+@app.middleware("http")
+async def add_server_timing(request, call_next):
+    started_at = time.perf_counter()
+    response = await call_next(request)
+    response.headers["Server-Timing"] = f"app;dur={(time.perf_counter() - started_at) * 1000:.1f}"
+    return response
+
+
+_weather_cache: dict[tuple[float, float], tuple[float, str, dict]] = {}
+_location_cache: dict[tuple[str, str], tuple[float, list[dict]]] = {}
+
+
+def _get_weather_cache_entry(
+    key: tuple[float, float], max_age: int
+) -> tuple[float, str, dict] | None:
+    entry = _weather_cache.get(key)
+    if entry is None or time.monotonic() - entry[0] > max_age:
+        return None
+    return entry
+
+
+def _store_weather_cache_entry(key: tuple[float, float], data: dict) -> tuple[float, str, dict]:
+    entry = (time.monotonic(), datetime.now(UTC).isoformat(), data)
+    _weather_cache.pop(key, None)
+    _weather_cache[key] = entry
+    while len(_weather_cache) > WEATHER_CACHE_MAX_ENTRIES:
+        _weather_cache.pop(next(iter(_weather_cache)))
+    return entry
+
+
+def _get_location_cache_entry(
+    key: tuple[str, str], max_age: int
+) -> tuple[float, list[dict]] | None:
+    entry = _location_cache.get(key)
+    if entry is None or time.monotonic() - entry[0] > max_age:
+        return None
+    return entry
+
+
+def _store_location_cache_entry(key: tuple[str, str], results: list[dict]) -> tuple[float, list[dict]]:
+    entry = (time.monotonic(), results)
+    _location_cache.pop(key, None)
+    _location_cache[key] = entry
+    while len(_location_cache) > LOCATION_CACHE_MAX_ENTRIES:
+        _location_cache.pop(next(iter(_location_cache)))
+    return entry
 
 
 def initialize_database() -> None:
@@ -659,6 +715,8 @@ async def get_weather(
     thermal_sensitivity: Literal["cold", "neutral", "warm"] = "neutral",
     language: Literal["sv", "en"] = "sv",
 ) -> WeatherPayload:
+    cache_key = (round(latitude, 3), round(longitude, 3))
+    cached = _get_weather_cache_entry(cache_key, WEATHER_CACHE_SECONDS)
     params = {
         "latitude": latitude,
         "longitude": longitude,
@@ -668,16 +726,25 @@ async def get_weather(
         "timezone": "auto",
         "forecast_hours": 24,
     }
+    if cached is None:
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(8, connect=2)) as client:
+                response = await client.get(WEATHER_URL, params=params)
+                response.raise_for_status()
+                data = response.json()
+            cached = _store_weather_cache_entry(cache_key, data)
+        except (httpx.HTTPError, ValueError) as error:
+            cached = _get_weather_cache_entry(cache_key, WEATHER_STALE_SECONDS)
+            if cached is None:
+                raise HTTPException(status_code=502, detail="Väderdata kunde inte hämtas just nu.") from error
+
     try:
-        async with httpx.AsyncClient(timeout=12) as client:
-            response = await client.get(WEATHER_URL, params=params)
-            response.raise_for_status()
-            data = response.json()
-        payload = build_payload(data, city, mode, thermal_sensitivity, language)
+        payload = build_payload(cached[2], city, mode, thermal_sensitivity, language)
+        payload.refreshed_at = cached[1]
         if language == "en":
             return WeatherPayload.model_validate(translate_payload(payload.model_dump()))
         return payload
-    except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
+    except (KeyError, TypeError, ValueError) as error:
         raise HTTPException(status_code=502, detail="Väderdata kunde inte hämtas just nu.") from error
 
 
@@ -686,9 +753,19 @@ async def get_location_suggestions(
     query: Annotated[str, Query(min_length=2, max_length=80)],
     language: Literal["sv", "en"] = "sv",
 ) -> list[dict]:
+    cache_key = (" ".join(query.casefold().split()), language)
+    cached = _get_location_cache_entry(cache_key, LOCATION_CACHE_SECONDS)
+    if cached is not None:
+        return [dict(city) for city in cached[1]]
+
     try:
-        return [city.model_dump() for city in await search_cities(query, language)]
-    except httpx.HTTPError as error:
+        results = [city.model_dump() for city in await search_cities(query, language)]
+        _store_location_cache_entry(cache_key, results)
+        return results
+    except (httpx.HTTPError, ValueError, TypeError) as error:
+        cached = _get_location_cache_entry(cache_key, LOCATION_STALE_SECONDS)
+        if cached is not None:
+            return [dict(city) for city in cached[1]]
         raise HTTPException(status_code=502, detail="Ortsökningen är tillfälligt otillgänglig.") from error
 
 
